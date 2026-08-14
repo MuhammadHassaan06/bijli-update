@@ -1,0 +1,163 @@
+<html lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { "colors": { "on-primary": "#ffffff", "surface-container-high": "#e7e8e9", "on-tertiary-fixed": "#410003", "surface": "#f8f9fa", "background": "#f8f9fa", "on-primary-container": "#88e274", "secondary": "#735c00", "on-secondary-container": "#6f5900", "on-error": "#ffffff", "surface-variant": "#e1e3e4", "outline-variant": "#bfcab7", "surface-dim": "#d9dadb", "tertiary": "#86000d", "on-surface-variant": "#404a3b", "on-secondary-fixed": "#231b00", "error-container": "#ffdad6", "tertiary-fixed-dim": "#ffb3ac", "on-background": "#191c1d", "secondary-fixed-dim": "#eec209", "secondary-fixed": "#ffe084", "tertiary-container": "#af0f1a", "inverse-surface": "#2e3132", "primary": "#004b00", "on-tertiary": "#ffffff", "inverse-on-surface": "#f0f1f2", "on-error-container": "#93000a", "surface-container": "#edeeef", "on-secondary": "#ffffff", "error": "#ba1a1a", "surface-bright": "#f8f9fa", "on-secondary-fixed-variant": "#574500", "on-primary-fixed-variant": "#005300", "surface-tint": "#106e09", "on-tertiary-fixed-variant": "#930010", "surface-container-low": "#f3f4f5", "surface-container-lowest": "#ffffff", "primary-fixed-dim": "#81db6e", "primary-container": "#006600", "primary-fixed": "#9cf987", "on-surface": "#191c1d", "tertiary-fixed": "#ffdad6", "inverse-primary": "#81db6e", "secondary-container": "#fed023", "surface-container-highest": "#e1e3e4", "on-tertiary-container": "#ffbdb7", "outline": "#707a6a", "on-primary-fixed": "#002200" }, "borderRadius": { "DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem" }, "spacing": { "base": "8px", "stack-lg": "24px", "gutter": "16px", "container-padding": "20px", "stack-md": "12px", "stack-sm": "4px" }, "fontFamily": { "display-lg": ["Inter"], "body-md": ["Inter"], "label-md": ["Inter"], "headline-sm": ["Inter"] } } } }</script><style>@layer base { body { -webkit-tap-highlight-color: transparent; overscroll-behavior-y: none; } .pb-safe { padding-bottom: env(safe-area-inset-bottom); } .pt-safe { padding-top: env(safe-area-inset-top); } } .no-scrollbar::-webkit-scrollbar { display: none; }</style></head><body class="bg-background text-on-surface font-body-md"><header class="fixed top-0 w-full z-50 bg-primary pt-safe shadow-[0_1px_8px_rgba(0,0,0,0.08)]"><div class="h-16 flex items-center justify-between px-container-padding"><div class="flex items-center gap-stack-md"><img alt="Bijli Update Logo" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida-public/AB6AXuANuZlHus1YSDvPfsHUQH8cIsOg_SzMH6OfglXtpYpBDP8voB7l3E22Jp8ygqvXQmzaVhVg0GMn5cliGlWphTdz34tVHjdO2U1wk9XVqtWv3BcbIg9xv8nf0Uvqszwr3VrEPYRimxollbfUbToJ_Vdd5IkUjlDKKir6HFQPtjo7w8yxGzz1PlcR8Q-am2w9qFREsLmoYf2gnG1shm4WM8WzcQwJtvpxbtxyg5ADgyPC-Hy4htdogjqR"/><span class="font-headline-md text-headline-sm text-on-primary font-bold">Bijli Update</span></div><div class="flex items-center gap-stack-md"><div class="w-8 h-8 rounded-full bg-on-primary/20 flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></div></header><main class="pt-16 min-h-screen bg-surface-container-lowest"><div class="flex flex-col w-full pb-6">
+<!-- Header Section -->
+<div class="px-container-padding py-stack-md">
+<h1 class="font-headline-md text-headline-md text-on-surface mb-stack-sm flex items-center gap-2">
+<span class="material-symbols-outlined text-tertiary">trending_up</span>
+      Trending Outages
+    </h1>
+<p class="font-body-md text-body-md text-on-surface-variant">
+      Areas with the highest number of active power outage reports right now.
+    </p>
+</div>
+<!-- Summary Statistics -->
+<div class="px-container-padding mb-stack-lg">
+<div class="bg-surface-container rounded-xl p-4 shadow-sm relative overflow-hidden">
+<!-- Subtle background pattern -->
+<div class="absolute inset-0 opacity-10 pointer-events-none">
+<svg class="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+<defs>
+<pattern height="20" id="grid-pattern" patternunits="userSpaceOnUse" width="20">
+<circle class="text-on-surface" cx="2" cy="2" fill="currentColor" r="1"></circle>
+</pattern>
+</defs>
+<rect fill="url(#grid-pattern)" height="100%" width="100%"></rect>
+</svg>
+</div>
+<div class="relative z-10 flex flex-col gap-2">
+<span class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Total Reports Today</span>
+<div class="flex items-baseline gap-2">
+<span class="font-display-lg-mobile text-display-lg-mobile text-primary-container font-bold">1,248</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">reports across Pakistan</span>
+</div>
+<!-- Progress/Status Bar -->
+<div class="mt-2 flex gap-1 h-2 rounded-full overflow-hidden bg-surface-variant">
+<div class="bg-tertiary h-full rounded-l-full" style="width: 45%;"></div>
+<div class="bg-secondary-container h-full" style="width: 25%;"></div>
+<div class="bg-primary-container h-full rounded-r-full" style="width: 30%;"></div>
+</div>
+<div class="flex justify-between mt-1 px-1">
+<div class="flex items-center gap-1">
+<div class="w-2 h-2 rounded-full bg-tertiary"></div>
+<span class="font-label-md text-[10px] text-on-surface-variant">Active</span>
+</div>
+<div class="flex items-center gap-1">
+<div class="w-2 h-2 rounded-full bg-secondary-container"></div>
+<span class="font-label-md text-[10px] text-on-surface-variant">Scheduled</span>
+</div>
+<div class="flex items-center gap-1">
+<div class="w-2 h-2 rounded-full bg-primary-container"></div>
+<span class="font-label-md text-[10px] text-on-surface-variant">Resolved</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Leaderboard -->
+<div class="px-container-padding mb-stack-lg flex flex-col gap-stack-md">
+<div class="flex justify-between items-center mb-1">
+<h2 class="font-headline-sm text-headline-sm text-on-surface">Top Hotspots</h2>
+<button class="font-label-md text-label-md text-primary bg-primary/10 px-3 py-1.5 rounded-full flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">filter_list</span>
+            Filter
+        </button>
+</div>
+<!-- Leaderboard Item 1 -->
+<div class="bg-surface-container-lowest rounded-xl p-4 shadow-sm flex items-center gap-4 relative overflow-hidden group">
+<!-- Status Left Border -->
+<div class="absolute left-0 top-0 bottom-0 w-1.5 bg-tertiary rounded-l-xl"></div>
+<div class="w-10 h-10 rounded-full bg-tertiary/10 flex items-center justify-center shrink-0">
+<span class="font-headline-sm text-headline-sm text-tertiary font-bold">1</span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center justify-between mb-1">
+<h3 class="font-body-lg text-body-lg text-on-surface font-semibold truncate">Gulshan-e-Iqbal</h3>
+<span class="font-label-md text-label-md text-tertiary bg-tertiary/10 px-2 py-0.5 rounded-full whitespace-nowrap">89 reports</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">location_on</span>
+          Karachi, Sindh
+        </p>
+</div>
+</div>
+<!-- Leaderboard Item 2 -->
+<div class="bg-surface-container-lowest rounded-xl p-4 shadow-sm flex items-center gap-4 relative overflow-hidden">
+<!-- Status Left Border -->
+<div class="absolute left-0 top-0 bottom-0 w-1.5 bg-tertiary rounded-l-xl opacity-80"></div>
+<div class="w-10 h-10 rounded-full bg-tertiary/10 flex items-center justify-center shrink-0">
+<span class="font-headline-sm text-headline-sm text-tertiary font-bold opacity-80">2</span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center justify-between mb-1">
+<h3 class="font-body-lg text-body-lg text-on-surface font-semibold truncate">Model Town</h3>
+<span class="font-label-md text-label-md text-tertiary bg-tertiary/10 px-2 py-0.5 rounded-full whitespace-nowrap opacity-80">54 reports</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">location_on</span>
+          Lahore, Punjab
+        </p>
+</div>
+</div>
+<!-- Leaderboard Item 3 -->
+<div class="bg-surface-container-lowest rounded-xl p-4 shadow-sm flex items-center gap-4 relative overflow-hidden">
+<!-- Status Left Border -->
+<div class="absolute left-0 top-0 bottom-0 w-1.5 bg-secondary-container rounded-l-xl"></div>
+<div class="w-10 h-10 rounded-full bg-surface-variant flex items-center justify-center shrink-0">
+<span class="font-headline-sm text-headline-sm text-on-surface-variant font-bold">3</span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center justify-between mb-1">
+<h3 class="font-body-lg text-body-lg text-on-surface font-semibold truncate">F-8 Markaz</h3>
+<span class="font-label-md text-label-md text-secondary bg-secondary/10 px-2 py-0.5 rounded-full whitespace-nowrap">42 reports</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">location_on</span>
+          Islamabad, ICT
+        </p>
+</div>
+</div>
+<!-- Leaderboard Item 4 -->
+<div class="bg-surface-container-lowest rounded-xl p-4 shadow-sm flex items-center gap-4 relative overflow-hidden">
+<!-- Status Left Border -->
+<div class="absolute left-0 top-0 bottom-0 w-1.5 bg-surface-variant rounded-l-xl"></div>
+<div class="w-10 h-10 rounded-full bg-surface-variant flex items-center justify-center shrink-0">
+<span class="font-headline-sm text-headline-sm text-on-surface-variant font-bold">4</span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center justify-between mb-1">
+<h3 class="font-body-lg text-body-lg text-on-surface font-semibold truncate">Saddar</h3>
+<span class="font-label-md text-label-md text-on-surface-variant bg-surface-variant/50 px-2 py-0.5 rounded-full whitespace-nowrap">28 reports</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">location_on</span>
+          Rawalpindi, Punjab
+        </p>
+</div>
+</div>
+<button class="w-full py-3 mt-2 rounded-xl bg-surface-container-low text-primary font-label-md font-semibold text-center flex items-center justify-center gap-2 active:bg-surface-container transition-colors">
+        View All Hotspots
+        <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+</button>
+</div>
+<!-- Map View Placeholder -->
+<div class="px-container-padding mb-stack-lg">
+<div class="bg-surface-container-lowest rounded-xl shadow-sm overflow-hidden flex flex-col relative group cursor-not-allowed">
+<div class="h-32 bg-surface-variant relative flex items-center justify-center" data-alt="A softly blurred, stylized abstract map of Pakistan in shades of light grey and muted green, with subtle glowing dots indicating power grids. Corporate minimal aesthetic." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuC86_hTLuuG5KEEmPoT60nL55pHjRzISNp7diJMeQFA8w5xV3ViCDs2OYmANZ5QW2OjoZgKaP_8aX2IkAydlO_2jsSNDsYTH73MSZ5IJEOdMy4nT4_tmML1N592dVbgUrMCk6cRVnuAnFnVLHSlhNzW6BdqG_yiorQvOismrl_2kMMEWAcYf5VxEmWUQoR7CjSPhHaCDV6BUKIlJZAI8IXje1tPyA-k1DwC5-oQeYJTvCN04pyg-2pD')">
+<!-- Scrim for contrast -->
+<div class="absolute inset-0 bg-background/60 backdrop-blur-[2px]"></div>
+<div class="relative z-10 flex flex-col items-center gap-2">
+<div class="w-12 h-12 rounded-full bg-surface-container shadow-md flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-[24px]">map</span>
+</div>
+</div>
+</div>
+<div class="p-4 text-center bg-surface-container-lowest relative z-10">
+<h3 class="font-headline-sm text-headline-sm text-on-surface mb-1">Live Map View</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Visualize outages across the national grid.</p>
+<div class="inline-block mt-3 px-3 py-1 bg-surface-container-high rounded-full">
+<span class="font-label-md text-label-md text-on-surface-variant">Coming Soon</span>
+</div>
+</div>
+</div>
+</div>
+</div><footer class="py-stack-lg px-container-padding bg-surface-container-low mb-20 text-center"><div class="flex justify-center gap-stack-lg mb-stack-md text-label-md font-label-md text-on-surface-variant"><a href="#">Terms</a><a href="#">Privacy</a><a href="#">Help</a></div><p class="text-label-md text-on-surface-variant opacity-70">© 2024 Bijli Update Pakistan</p></footer></main><nav class="fixed bottom-0 w-full z-50 pb-safe bg-surface/90 backdrop-blur-xl shadow-[0_-1px_8px_rgba(0,0,0,0.04)]" data-active-classes="text-primary font-bold"><div class="flex justify-around items-center h-16"><a class="flex flex-col items-center gap-1 text-on-surface-variant transition-colors" data-path="home" href="#"><span class="material-symbols-outlined">home</span><span class="text-label-md font-label-md">Home</span></a><a aria-current="page" class="flex flex-col items-center gap-1 transition-colors text-primary font-bold" data-path="trending" href="#"><span class="material-symbols-outlined">trending_up</span><span class="text-label-md font-label-md">Trending</span></a><a class="flex flex-col items-center gap-1 text-on-surface-variant transition-colors" data-path="about" href="#"><span class="material-symbols-outlined">info</span><span class="text-label-md font-label-md">About</span></a></div></nav></body></html>
