@@ -26,7 +26,7 @@ export default function HomePage() {
   ]);
   const [selectedCity, setSelectedCity] = useState('Karachi');
   const [areaInput, setAreaInput] = useState('');
-  
+
   const [reports, setReports] = useState([]);
   const [aggregate, setAggregate] = useState({
     outageCount: 0,
@@ -263,11 +263,10 @@ export default function HomePage() {
               </h3>
               {/* Confidence Badge (Issue #7) */}
               {isHighAlert && (
-                <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold flex items-center gap-1 ${
-                  aggregate.confidence === 'CONFIRMED'
+                <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold flex items-center gap-1 ${aggregate.confidence === 'CONFIRMED'
                     ? 'bg-red-100 text-red-800 border border-red-300'
                     : 'bg-amber-100 text-amber-800 border border-amber-300'
-                }`}>
+                  }`}>
                   <span className="material-symbols-outlined text-[12px]">
                     {aggregate.confidence === 'CONFIRMED' ? 'verified' : 'help_outline'}
                   </span>
@@ -355,11 +354,10 @@ export default function HomePage() {
                             {item.area} <span className="text-on-surface-variant font-normal text-body-sm">({item.city})</span>
                           </span>
                           {/* Item Confidence Badge (Issue #7) */}
-                          <span className={`px-1.5 py-0.2 rounded text-[10px] font-semibold border ${
-                            isConfirmed
+                          <span className={`px-1.5 py-0.2 rounded text-[10px] font-semibold border ${isConfirmed
                               ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                               : 'bg-slate-100 text-slate-600 border-slate-200'
-                          }`}>
+                            }`}>
                             {isConfirmed ? 'Confirmed' : 'Unverified'}
                           </span>
                         </div>
