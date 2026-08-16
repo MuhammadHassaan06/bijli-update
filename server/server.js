@@ -392,15 +392,17 @@ app.get('/api/trending', (req, res) => {
   });
 });
 
-const nodemailer = require('nodemailer');
+let nodemailer = null;
+let mailTransporter = null;
+try {
+  nodemailer = require('nodemailer');
+  mailTransporter = nodemailer.createTransport({ jsonTransport: true });
+} catch (e) {
+  console.warn('Nodemailer not available.');
+}
 
 // Notification Inbox Memory Log
 const sentNotificationsLog = [];
-
-// Nodemailer Transporter Setup (uses JSON / Console logging if no SMTP env configured)
-const mailTransporter = nodemailer.createTransport({
-  jsonTransport: true
-});
 
 async function sendOutageEmail(toEmail, subject, text, html) {
   const mailOptions = {
@@ -412,7 +414,9 @@ async function sendOutageEmail(toEmail, subject, text, html) {
   };
 
   try {
-    const info = await mailTransporter.sendMail(mailOptions);
+    if (mailTransporter) {
+      await mailTransporter.sendMail(mailOptions);
+    }
     const notification = {
       id: Date.now(),
       recipient: toEmail,
