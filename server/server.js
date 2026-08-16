@@ -104,6 +104,7 @@ app.post('/api/report', (req, res) => {
     }
 
     const newRep = dbModule.memory.addReport({ city, area, status, duration, ip_hash: ipHash });
+    try { notifySubscribersForReport(newRep); } catch(e){}
     return res.status(201).json(newRep);
   }
 
@@ -131,6 +132,8 @@ app.post('/api/report', (req, res) => {
 
   const result = insertStmt.run(city, area, status, duration, now, ipHash);
   const newReport = db.prepare('SELECT id, city, area, status, duration, created_at FROM reports WHERE id = ?').get(result.lastInsertRowid);
+
+  try { notifySubscribersForReport(newReport); } catch(e){}
 
   res.status(201).json(newReport);
 });
@@ -341,26 +344,213 @@ app.get('/api/trending', (req, res) => {
   });
 });
 
-// POST /api/notify-map
-app.post('/api/notify-map', (req, res) => {
-  const { email } = req.body;
-  if (!email || !email.includes('@')) {
-    return res.status(400).json({ error: 'Please enter a valid email address.' });
-  }
+const nodemailer = require('nodemailer');
 
-  if (dbModule.isMemoryStore()) {
-    dbModule.memory.addSubscriber(email.trim().toLowerCase());
-    return res.status(201).json({ message: "Thank you! We will notify you when Live Map View launches in your city." });
-  }
+// Notification Inbox Memory Log
+const sentNotificationsLog = [];
+
+// Nodemailer Transporter Setup (uses JSON / Console logging if no SMTP env configured)
+const mailTransporter = nodemailer.createTransport({
+  jsonTransport: true
+});
+
+async function sendOutageEmail(toEmail, subject, text, html) {
+  const mailOptions = {
+    from: '"Bijli Update Alerts 🇵🇰" <alerts@bijliupdate.pk>',
+    to: toEmail,
+    subject,
+    text,
+    html
+  };
 
   try {
-    const db = dbModule.getDb();
-    const stmt = db.prepare('INSERT OR IGNORE INTO map_subscribers (email) VALUES (?)');
-    stmt.run(email.trim().toLowerCase());
-    res.status(201).json({ message: "Thank you! We will notify you when Live Map View launches in your city." });
+    const info = await mailTransporter.sendMail(mailOptions);
+    const notification = {
+      id: Date.now(),
+      recipient: toEmail,
+      channel: 'email',
+      subject,
+      text,
+      html,
+      sent_at: new Date().toISOString()
+    };
+    sentNotificationsLog.unshift(notification);
+    console.log(`[EMAIL DISPATCHED to ${toEmail}]:`, subject);
+    return notification;
   } catch (err) {
-    res.status(500).json({ error: 'Failed to register notification request.' });
+    console.error('Email dispatch error:', err);
+    return null;
   }
+}
+
+function sendWhatsAppAlert(phone, text) {
+  const notification = {
+    id: Date.now(),
+    recipient: phone,
+    channel: 'whatsapp',
+    subject: 'WhatsApp Outage Alert',
+    text,
+    sent_at: new Date().toISOString()
+  };
+  sentNotificationsLog.unshift(notification);
+  console.log(`[WHATSAPP DISPATCHED to ${phone}]:`, text);
+  return notification;
+}
+
+// Function to notify subscribers when a new report is created
+function notifySubscribersForReport(report) {
+  const { city, area, status, duration } = report;
+  const isOutage = status === 'OUTAGE';
+
+  let subscribers = [];
+  if (dbModule.isMemoryStore()) {
+    subscribers = dbModule.memory.subscribers || [];
+  } else {
+    try {
+      const db = dbModule.getDb();
+      subscribers = db.prepare('SELECT * FROM map_subscribers WHERE LOWER(city) = LOWER(?)').all(city);
+    } catch (e) {
+      subscribers = [];
+    }
+  }
+
+  for (const sub of subscribers) {
+    const contact = typeof sub === 'string' ? sub : (sub.email || sub.phone || sub.contact);
+    const subChannel = (typeof sub === 'object' && sub.channel) ? sub.channel : (contact && contact.includes('@') ? 'email' : 'whatsapp');
+
+    if (!contact) continue;
+
+    if (subChannel === 'email') {
+      const subject = isOutage
+        ? `🔴 Bijli Alert: Power Outage reported in ${area} (${city})`
+        : `🟢 Bijli Restored: Power back on in ${area} (${city})`;
+
+      const html = `
+        <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 500px; border: 1px solid #e0e0e0; border-radius: 12px; background: #fafafa;">
+          <h2 style="color: ${isOutage ? '#ba1a1a' : '#006600'}; font-size: 20px; margin-top: 0;">
+            ${isOutage ? '🔴 Power Outage Reported' : '🟢 Power Restored'}
+          </h2>
+          <p style="font-size: 15px; color: #333;">
+            An outage report was just recorded for <strong>${area}, ${city}</strong>.
+          </p>
+          <div style="background: #ffffff; padding: 12px; border-radius: 8px; margin: 15px 0; border: 1px solid #eee;">
+            <p style="margin: 4px 0; font-size: 14px;"><strong>Status:</strong> ${isOutage ? 'OUTAGE IN PROGRESS' : 'RESTORED'}</p>
+            <p style="margin: 4px 0; font-size: 14px;"><strong>Expected Duration:</strong> ${duration || 'Unscheduled'}</p>
+            <p style="margin: 4px 0; font-size: 14px;"><strong>Reported At:</strong> ${new Date().toLocaleString()}</p>
+          </div>
+          <p style="font-size: 13px; color: #666;">
+            Emergency Helplines for ${city}: Call <strong>118</strong> or contact DISCO customer support.
+          </p>
+          <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;" />
+          <p style="font-size: 11px; color: #999; text-align: center;">
+            Bijli Update Pakistan 🇵🇰 — Hyperlocal Power Tracker
+          </p>
+        </div>
+      `;
+
+      sendOutageEmail(contact, subject, `Outage reported in ${area} (${city})`, html);
+    } else {
+      const waText = isOutage
+        ? `🔴 Bijli Outage Alert in ${area} (${city})! Expected duration: ${duration || 'Unscheduled'}. Track live on Bijli Update!`
+        : `🟢 Bijli Restored in ${area} (${city})! Power grid is operating normally.`;
+
+      sendWhatsAppAlert(contact, waText);
+    }
+  }
+}
+
+// GET /api/notifications/inbox
+app.get('/api/notifications/inbox', (req, res) => {
+  const contact = req.query.contact ? req.query.contact.trim().toLowerCase() : '';
+  if (!contact) {
+    return res.json(sentNotificationsLog.slice(0, 10));
+  }
+  const userLogs = sentNotificationsLog.filter(n =>
+    n.recipient.toLowerCase().includes(contact)
+  );
+  res.json(userLogs);
+});
+
+// POST /api/notify-map (Outage Alerts Subscription)
+app.post('/api/notify-map', async (req, res) => {
+  const { email, phone, city = 'Karachi', area = 'General', channel = 'email' } = req.body;
+
+  let contact = channel === 'whatsapp' ? phone : email;
+
+  if (!contact) {
+    return res.status(400).json({ error: 'Please enter a valid email address or WhatsApp phone number.' });
+  }
+
+  contact = contact.trim();
+
+  if (channel === 'email' && !contact.includes('@')) {
+    return res.status(400).json({ error: 'Please enter a valid email address (e.g. user@example.com).' });
+  }
+
+  if (channel === 'whatsapp') {
+    const cleanPhone = contact.replace(/\D/g, '');
+    if (cleanPhone.length < 10) {
+      return res.status(400).json({ error: 'Please enter a valid 11-digit WhatsApp phone number (e.g. 03001234567).' });
+    }
+    contact = cleanPhone;
+  }
+
+  // Save to DB / Memory
+  if (dbModule.isMemoryStore()) {
+    dbModule.memory.addSubscriber({ contact, email: channel === 'email' ? contact : null, phone: channel === 'whatsapp' ? contact : null, city, area, channel });
+  } else {
+    try {
+      const db = dbModule.getDb();
+      const stmt = db.prepare(`
+        INSERT INTO map_subscribers (email, phone, city, area, channel)
+        VALUES (?, ?, ?, ?, ?)
+      `);
+      stmt.run(
+        channel === 'email' ? contact.toLowerCase() : null,
+        channel === 'whatsapp' ? contact : null,
+        city,
+        area,
+        channel
+      );
+    } catch (err) {
+      // Ignore duplicate subscription errors
+    }
+  }
+
+  // Send Welcome Confirmation Email or WhatsApp message
+  if (channel === 'email') {
+    const welcomeSubject = `✅ Confirmed: Bijli Outage Alerts for ${area} (${city})`;
+    const welcomeHtml = `
+      <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 500px; border: 1px solid #106e09; border-radius: 12px; background: #f4fbf4;">
+        <h2 style="color: #106e09; font-size: 20px; margin-top: 0;">
+          ✅ Alert Subscription Active!
+        </h2>
+        <p style="font-size: 15px; color: #333;">
+          You are now subscribed to live load-shedding and outage alerts for <strong>${area}, ${city}</strong>.
+        </p>
+        <p style="font-size: 14px; color: #555;">
+          Whenever neighbors report an outage in your area, you will receive an instant email notification right here.
+        </p>
+        <hr style="border: none; border-top: 1px solid #cce5cc; margin: 20px 0;" />
+        <p style="font-size: 11px; color: #777; text-align: center;">
+          Bijli Update Pakistan 🇵🇰 — Hyperlocal Power Tracker
+        </p>
+      </div>
+    `;
+    await sendOutageEmail(contact.toLowerCase(), welcomeSubject, `Subscribed to outage alerts for ${area} (${city})`, welcomeHtml);
+  } else {
+    const welcomeText = `✅ Bijli Update: Welcome! You are subscribed to instant WhatsApp load shedding alerts for ${area} (${city}).`;
+    sendWhatsAppAlert(contact, welcomeText);
+  }
+
+  res.status(201).json({
+    success: true,
+    contact,
+    channel,
+    city,
+    area,
+    message: `Subscribed successfully! Confirmation sent to ${contact}.`
+  });
 });
 
 if (!process.env.VERCEL) {

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { translations } from '../utils/translations';
 import OutageMap from '../components/OutageMap';
+import SubscribeCard from '../components/SubscribeCard';
 
 const API_BASE = import.meta.env.VITE_API_BASE || '/api';
 
@@ -275,41 +276,9 @@ export default function TrendingPage({ lang = 'en', onSelectCity }) {
         })}
       </div>
 
-      {/* Map Email Subscription */}
+      {/* Outage Alerts & Push Notifications Subscription Card */}
       <div className="px-container-padding mb-stack-lg">
-        <div className="bg-surface-container-lowest rounded-xl p-4 border border-surface-container shadow-xs text-center">
-          <p className="text-xs font-semibold text-on-surface-variant mb-2">
-            Get instant mobile push notifications when outages hit your area
-          </p>
-          {mapSuccessMsg ? (
-            <div className="p-3 bg-emerald-100 border border-emerald-300 text-emerald-800 rounded-xl font-body-sm font-semibold flex items-center justify-center gap-2">
-              <span className="material-symbols-outlined text-[20px]">check_circle</span>
-              {mapSuccessMsg}
-            </div>
-          ) : (
-            <form onSubmit={handleMapSubscribe} className="flex gap-2 max-w-sm mx-auto">
-              <input
-                type="email"
-                value={emailInput}
-                onChange={(e) => setEmailInput(e.target.value)}
-                placeholder="Enter email for area alerts"
-                className="flex-1 px-3 py-2 text-body-sm bg-surface-container-low text-on-surface border border-surface-container-high rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                required
-              />
-              <button
-                type="submit"
-                disabled={mapSubmitting}
-                className="px-4 py-2 bg-primary text-on-primary font-label-md font-semibold rounded-lg hover:bg-primary-container transition-colors disabled:opacity-80 flex items-center gap-1 shrink-0 cursor-pointer"
-              >
-                {mapSubmitting ? (
-                  <span className="material-symbols-outlined text-[16px] animate-spin">refresh</span>
-                ) : (
-                  <span>Subscribe</span>
-                )}
-              </button>
-            </form>
-          )}
-        </div>
+        <SubscribeCard lang={lang} />
       </div>
     </div>
   );

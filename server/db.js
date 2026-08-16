@@ -45,10 +45,23 @@ try {
 
     CREATE TABLE IF NOT EXISTS map_subscribers (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      email TEXT NOT NULL UNIQUE,
+      email TEXT,
+      phone TEXT,
+      city TEXT DEFAULT 'Karachi',
+      area TEXT DEFAULT 'General',
+      channel TEXT DEFAULT 'email',
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
   `);
+
+  try {
+    db.exec(`ALTER TABLE map_subscribers ADD COLUMN phone TEXT`);
+    db.exec(`ALTER TABLE map_subscribers ADD COLUMN city TEXT DEFAULT 'Karachi'`);
+    db.exec(`ALTER TABLE map_subscribers ADD COLUMN area TEXT DEFAULT 'General'`);
+    db.exec(`ALTER TABLE map_subscribers ADD COLUMN channel TEXT DEFAULT 'email'`);
+  } catch (e) {
+    // Columns exist
+  }
 
   try {
     db.exec(`ALTER TABLE reports ADD COLUMN duration TEXT DEFAULT 'Unscheduled'`);
@@ -95,10 +108,13 @@ module.exports = {
       inMemoryReports.unshift(newRep);
       return newRep;
     },
-    addSubscriber: (email) => {
-      if (!inMemorySubscribers.includes(email)) {
-        inMemorySubscribers.push(email);
+    addSubscriber: (sub) => {
+      const subObj = typeof sub === 'string' ? { contact: sub, channel: 'email', city: 'Karachi', area: 'General' } : sub;
+      const exists = inMemorySubscribers.some(s => (typeof s === 'object' ? s.contact : s) === subObj.contact);
+      if (!exists) {
+        inMemorySubscribers.push({ ...subObj, created_at: new Date().toISOString() });
       }
+      return subObj;
     }
   }
 };
