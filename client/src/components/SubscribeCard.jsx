@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { playOutageAlertSound, playClickSound } from '../utils/audio';
-
-const API_BASE = import.meta.env.VITE_API_BASE || '/api';
+import { apiFetch } from '../utils/api';
 
 export default function SubscribeCard({ lang = 'en' }) {
   const [channel, setChannel] = useState('whatsapp'); // 'whatsapp' | 'email'
@@ -64,7 +63,7 @@ export default function SubscribeCard({ lang = 'en' }) {
 
     setLoading(true);
 
-    fetch(`${API_BASE}/notify-map`, {
+    apiFetch('/notify-map', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -117,7 +116,7 @@ export default function SubscribeCard({ lang = 'en' }) {
 
     // Also trigger backend alert dispatch simulation
     if (activeSubscription) {
-      fetch(`${API_BASE}/report`, {
+      apiFetch('/report', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -135,7 +134,7 @@ export default function SubscribeCard({ lang = 'en' }) {
   const fetchInbox = () => {
     if (!activeSubscription?.contact) return;
     setLoadingInbox(true);
-    fetch(`${API_BASE}/notifications/inbox?contact=${encodeURIComponent(activeSubscription.contact)}`)
+    apiFetch(`/notifications/inbox?contact=${encodeURIComponent(activeSubscription.contact)}`)
       .then(res => res.json())
       .then(data => {
         setInboxLogs(Array.isArray(data) ? data : []);

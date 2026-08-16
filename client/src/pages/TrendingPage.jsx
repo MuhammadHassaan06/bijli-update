@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { translations } from '../utils/translations';
 import OutageMap from '../components/OutageMap';
 import SubscribeCard from '../components/SubscribeCard';
-
-const API_BASE = import.meta.env.VITE_API_BASE || '/api';
+import { apiFetch } from '../utils/api';
 
 function pluralizeReport(count) {
   return `${count} ${count === 1 ? 'report' : 'reports'}`;
@@ -22,7 +21,7 @@ export default function TrendingPage({ lang = 'en', onSelectCity }) {
   const [mapErrorMsg, setMapErrorMsg] = useState(null);
 
   useEffect(() => {
-    fetch(`${API_BASE}/trending?limit=15`)
+    apiFetch('/trending?limit=15')
       .then(res => res.json())
       .then(data => {
         setTrendingData(data);
@@ -44,7 +43,7 @@ export default function TrendingPage({ lang = 'en', onSelectCity }) {
     setMapSubmitting(true);
     setMapErrorMsg(null);
 
-    fetch(`${API_BASE}/notify-map`, {
+    apiFetch('/notify-map', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: emailInput.trim() })

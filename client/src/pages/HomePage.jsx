@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { translations } from '../utils/translations';
 import { playOutageAlertSound, playRestoredSound, playClickSound } from '../utils/audio';
-
-const API_BASE = import.meta.env.VITE_API_BASE || '/api';
+import { apiFetch } from '../utils/api';
+import LoadSheddingPredictor from '../components/LoadSheddingPredictor';
+import SolarBatteryCalculator from '../components/SolarBatteryCalculator';
 
 function formatRelativeTime(dateStr) {
   if (!dateStr) return 'just now';
@@ -29,6 +30,7 @@ export default function HomePage({ lang = 'en', selectedCity = 'Karachi', setSel
     'Multan', 'Peshawar', 'Quetta', 'Hyderabad', 'Gujranwala'
   ]);
   const [areaInput, setAreaInput] = useState(() => localStorage.getItem('bijli_area') || '');
+  const [noteInput, setNoteInput] = useState('');
   const [popularAreas, setPopularAreas] = useState([]);
 
   // Selected duration for outage reporting
@@ -72,7 +74,7 @@ export default function HomePage({ lang = 'en', selectedCity = 'Karachi', setSel
 
   // Fetch Cities
   useEffect(() => {
-    fetch(`${API_BASE}/cities`)
+    apiFetch('/cities')
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data)) setCities(data);
@@ -83,7 +85,7 @@ export default function HomePage({ lang = 'en', selectedCity = 'Karachi', setSel
   // Fetch Popular Areas for Selected City
   useEffect(() => {
     if (selectedCity) {
-      fetch(`${API_BASE}/popular-areas?city=${encodeURIComponent(selectedCity)}`)
+      apiFetch(`/popular-areas?city=${encodeURIComponent(selectedCity)}`)
         .then(res => res.json())
         .then(data => {
           if (Array.isArray(data)) setPopularAreas(data);
@@ -95,11 +97,11 @@ export default function HomePage({ lang = 'en', selectedCity = 'Karachi', setSel
   // Fetch Reports function (Single Source of Truth)
   const fetchReports = () => {
     setApiError(false);
-    let url = `${API_BASE}/reports?hours=24`;
-    if (selectedCity) url += `&city=${encodeURIComponent(selectedCity)}`;
-    if (areaInput.trim()) url += `&area=${encodeURIComponent(areaInput.trim())}`;
+    let path = `/reports?hours=24`;
+    if (selectedCity) path += `&city=${encodeURIComponent(selectedCity)}`;
+    if (areaInput.trim()) path += `&area=${encodeURIComponent(areaInput.trim())}`;
 
-    fetch(url)
+    apiFetch(path)
       .then(res => {
         if (!res.ok) throw new Error('API server unavailable');
         return res.json();
@@ -140,14 +142,15 @@ export default function HomePage({ lang = 'en', selectedCity = 'Karachi', setSel
       playRestoredSound();
     }
 
-    fetch(`${API_BASE}/report`, {
+    apiFetch('/report', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         city: selectedCity,
         area: areaToReport,
         status: status,
-        duration: type === 'outage' ? selectedDuration : 'Resolved'
+        duration: type === 'outage' ? selectedDuration : 'Resolved',
+        note: noteInput.trim() || null
       })
     })
       .then(async (res) => {
@@ -160,6 +163,7 @@ export default function HomePage({ lang = 'en', selectedCity = 'Karachi', setSel
       .then(() => {
         setSubmittingType(null);
         setSuccessType(type);
+        setNoteInput('');
         fetchReports();
 
         setTimeout(() => {
@@ -335,6 +339,22 @@ export default function HomePage({ lang = 'en', selectedCity = 'Karachi', setSel
             )}
           </div>
 
+          {/* Optional Incident Note */}
+          <div className="flex flex-col gap-1.5 pt-2 border-t border-surface-container">
+            <label htmlFor="note-input" className="text-[11px] font-bold text-on-surface-variant flex items-center gap-1">
+              <span className="material-symbols-outlined text-[14px]">comment</span>
+              <span>Community Note / Cause (Optional):</span>
+            </label>
+            <input
+              id="note-input"
+              type="text"
+              value={noteInput}
+              onChange={(e) => setNoteInput(e.target.value)}
+              placeholder="e.g. Transformer trip on St 4, Feeder maintenance, Heavy rain"
+              className="w-full bg-surface-container-low text-on-surface text-xs p-2.5 rounded-lg border border-surface-container-high focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+          </div>
+
           {/* Outage Duration Selector Chips */}
           <div className="flex flex-col gap-1.5 pt-2 border-t border-surface-container">
             <span className="text-[11px] font-bold text-on-surface-variant">
@@ -465,6 +485,12 @@ export default function HomePage({ lang = 'en', selectedCity = 'Karachi', setSel
           </div>
         </div>
 
+        {/* DISCO Load Shedding Predictor & Timeline */}
+        <LoadSheddingPredictor city={selectedCity} area={areaInput.trim() || 'General'} />
+
+        {/* UPS & Solar Battery Backup Calculator */}
+        <SolarBatteryCalculator />
+
         {/* API Error State Banner */}
         {apiError && (
           <div className="bg-amber-50 border border-amber-300 text-amber-900 rounded-xl p-4 flex items-center justify-between">
@@ -524,39 +550,49 @@ export default function HomePage({ lang = 'en', selectedCity = 'Karachi', setSel
                 const isOutage = item.status === 'OUTAGE';
                 const isConfirmed = item.confidence === 'CONFIRMED';
                 return (
-                  <div key={item.id} className="p-gutter flex items-center justify-between">
-                    <div className="flex items-center gap-stack-md min-w-0">
-                      <div className={`w-8 h-8 rounded-full shrink-0 flex items-center justify-center ${isOutage ? 'bg-error-container text-error' : 'bg-primary-container/20 text-primary'}`}>
-                        <span className="material-symbols-outlined text-[18px]" style={{ fontVariationSettings: "'FILL' 1" }}>
-                          {isOutage ? 'bolt' : 'check_circle'}
-                        </span>
-                      </div>
-                      <div className="flex flex-col min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-body-md text-body-md text-on-surface font-semibold truncate">
-                            {item.area} <span className="text-on-surface-variant font-normal text-body-sm">({item.city})</span>
+                  <div key={item.id} className="p-gutter flex flex-col gap-1.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-stack-md min-w-0">
+                        <div className={`w-8 h-8 rounded-full shrink-0 flex items-center justify-center ${isOutage ? 'bg-error-container text-error' : 'bg-primary-container/20 text-primary'}`}>
+                          <span className="material-symbols-outlined text-[18px]" style={{ fontVariationSettings: "'FILL' 1" }}>
+                            {isOutage ? 'bolt' : 'check_circle'}
                           </span>
-                          <span className={`px-1.5 py-0.2 rounded text-[10px] font-semibold border ${
-                            isConfirmed
-                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                              : 'bg-slate-100 text-slate-600 border-slate-200'
-                          }`}>
-                            {isConfirmed ? t.confirmed : t.unverified}
-                          </span>
-                          {item.duration && isOutage && (
-                            <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
-                              ⏱️ {item.duration}
-                            </span>
-                          )}
                         </div>
-                        <span className={`font-label-md text-label-md ${isOutage ? 'text-error' : 'text-primary'}`}>
-                          {isOutage ? t.outageReported : t.powerRestored}
-                        </span>
+                        <div className="flex flex-col min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-body-md text-body-md text-on-surface font-semibold truncate">
+                              {item.area} <span className="text-on-surface-variant font-normal text-body-sm">({item.city})</span>
+                            </span>
+                            <span className={`px-1.5 py-0.2 rounded text-[10px] font-semibold border ${
+                              isConfirmed
+                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                : 'bg-slate-100 text-slate-600 border-slate-200'
+                            }`}>
+                              {isConfirmed ? t.confirmed : t.unverified}
+                            </span>
+                            {item.duration && isOutage && (
+                              <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                                ⏱️ {item.duration}
+                              </span>
+                            )}
+                          </div>
+                          <span className={`font-label-md text-label-md ${isOutage ? 'text-error' : 'text-primary'}`}>
+                            {isOutage ? t.outageReported : t.powerRestored}
+                          </span>
+                        </div>
                       </div>
+                      <span className="font-body-sm text-body-sm text-on-surface-variant shrink-0 ml-2">
+                        {formatRelativeTime(item.created_at)}
+                      </span>
                     </div>
-                    <span className="font-body-sm text-body-sm text-on-surface-variant shrink-0 ml-2">
-                      {formatRelativeTime(item.created_at)}
-                    </span>
+
+                    {/* Community Incident Note */}
+                    {item.note && (
+                      <div className="ml-11 text-xs text-on-surface bg-surface-container-low p-2 rounded-lg border border-surface-container font-medium flex items-center gap-1.5">
+                        <span className="material-symbols-outlined text-[14px] text-amber-600">comment</span>
+                        <span>"{item.note}"</span>
+                      </div>
+                    )}
                   </div>
                 );
               })

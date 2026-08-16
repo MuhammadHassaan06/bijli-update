@@ -5,12 +5,14 @@ import HomePage from './pages/HomePage';
 import TrendingPage from './pages/TrendingPage';
 import AboutPage from './pages/AboutPage';
 import DiscoHelplineModal from './components/DiscoHelplineModal';
+import NotificationInboxModal from './components/NotificationInboxModal';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('home');
   const [lang, setLang] = useState('en');
   const [selectedCity, setSelectedCity] = useState('Karachi');
   const [isHelplineOpen, setIsHelplineOpen] = useState(false);
+  const [isInboxOpen, setIsInboxOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-surface-container-lowest text-on-surface font-body-md relative flex flex-col justify-between">
@@ -19,6 +21,7 @@ export default function App() {
         lang={lang}
         setLang={setLang}
         onOpenHelpline={() => setIsHelplineOpen(true)}
+        onOpenInbox={() => setIsInboxOpen(true)}
       />
 
       {/* Main Content Area */}
@@ -54,6 +57,12 @@ export default function App() {
         lang={lang}
         isOpen={isHelplineOpen}
         onClose={() => setIsHelplineOpen(false)}
+      />
+
+      {/* Received Email & Push Notification Inbox Modal */}
+      <NotificationInboxModal
+        isOpen={isInboxOpen}
+        onClose={() => setIsInboxOpen(false)}
       />
     </div>
   );

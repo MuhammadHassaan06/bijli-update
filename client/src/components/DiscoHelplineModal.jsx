@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { translations } from '../utils/translations';
-
-const API_BASE = import.meta.env.VITE_API_BASE || '/api';
+import { apiFetch } from '../utils/api';
 
 export default function DiscoHelplineModal({ city, lang, isOpen, onClose }) {
   const [helpline, setHelpline] = useState(null);
@@ -9,7 +8,7 @@ export default function DiscoHelplineModal({ city, lang, isOpen, onClose }) {
 
   useEffect(() => {
     if (isOpen && city) {
-      fetch(`${API_BASE}/helplines?city=${encodeURIComponent(city)}`)
+      apiFetch(`/helplines?city=${encodeURIComponent(city)}`)
         .then(res => res.json())
         .then(data => setHelpline(data))
         .catch(err => console.error('Failed to load helpline:', err));

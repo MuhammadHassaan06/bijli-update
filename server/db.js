@@ -39,6 +39,7 @@ try {
       area TEXT NOT NULL,
       status TEXT NOT NULL,
       duration TEXT DEFAULT 'Unscheduled',
+      note TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       ip_hash TEXT NOT NULL
     );
@@ -54,20 +55,13 @@ try {
     );
   `);
 
-  try {
-    db.exec(`ALTER TABLE map_subscribers ADD COLUMN phone TEXT`);
-    db.exec(`ALTER TABLE map_subscribers ADD COLUMN city TEXT DEFAULT 'Karachi'`);
-    db.exec(`ALTER TABLE map_subscribers ADD COLUMN area TEXT DEFAULT 'General'`);
-    db.exec(`ALTER TABLE map_subscribers ADD COLUMN channel TEXT DEFAULT 'email'`);
-  } catch (e) {
-    // Columns exist
-  }
+  try { db.exec(`ALTER TABLE map_subscribers ADD COLUMN phone TEXT`); } catch (e) {}
+  try { db.exec(`ALTER TABLE map_subscribers ADD COLUMN city TEXT DEFAULT 'Karachi'`); } catch (e) {}
+  try { db.exec(`ALTER TABLE map_subscribers ADD COLUMN area TEXT DEFAULT 'General'`); } catch (e) {}
+  try { db.exec(`ALTER TABLE map_subscribers ADD COLUMN channel TEXT DEFAULT 'email'`); } catch (e) {}
 
-  try {
-    db.exec(`ALTER TABLE reports ADD COLUMN duration TEXT DEFAULT 'Unscheduled'`);
-  } catch (e) {
-    // Column already exists
-  }
+  try { db.exec(`ALTER TABLE reports ADD COLUMN duration TEXT DEFAULT 'Unscheduled'`); } catch (e) {}
+  try { db.exec(`ALTER TABLE reports ADD COLUMN note TEXT`); } catch (e) {}
 
   const countStmt = db.prepare('SELECT COUNT(*) as count FROM reports');
   const { count } = countStmt.get();

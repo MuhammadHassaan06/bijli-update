@@ -1,6 +1,8 @@
 import React from 'react';
 
-export default function Header({ lang, setLang, onOpenHelpline }) {
+export default function Header({ lang, setLang, onOpenHelpline, onOpenInbox }) {
+  const hasSubscription = !!localStorage.getItem('bijli_subscription');
+
   return (
     <header className="fixed top-0 w-full z-50 bg-primary pt-safe shadow-[0_1px_8px_rgba(0,0,0,0.08)]">
       <div className="h-16 flex items-center justify-between px-container-padding">
@@ -10,6 +12,18 @@ export default function Header({ lang, setLang, onOpenHelpline }) {
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Notification Inbox Bell Button */}
+          <button
+            onClick={onOpenInbox}
+            className="p-1.5 bg-on-primary/20 hover:bg-on-primary/30 text-on-primary rounded-full relative transition-colors cursor-pointer"
+            title="Received Notifications & Email Inbox"
+          >
+            <span className="material-symbols-outlined text-[20px]">notifications</span>
+            {hasSubscription && (
+              <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-amber-400 border border-primary rounded-full animate-ping"></span>
+            )}
+          </button>
+
           {/* Emergency Helpline Button */}
           <button
             onClick={onOpenHelpline}

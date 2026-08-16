@@ -88,6 +88,7 @@ app.post('/api/report', (req, res) => {
   const ipHash = getIpHash(req);
 
   let duration = req.body.duration || 'Unscheduled';
+  let note = req.body.note ? req.body.note.trim().substring(0, 150) : null;
 
   if (dbModule.isMemoryStore()) {
     const fiveMinAgo = Date.now() - 5 * 60 * 1000;
@@ -103,7 +104,7 @@ app.post('/api/report', (req, res) => {
       });
     }
 
-    const newRep = dbModule.memory.addReport({ city, area, status, duration, ip_hash: ipHash });
+    const newRep = dbModule.memory.addReport({ city, area, status, duration, note, ip_hash: ipHash });
     try { notifySubscribersForReport(newRep); } catch(e){}
     return res.status(201).json(newRep);
   }
@@ -126,16 +127,63 @@ app.post('/api/report', (req, res) => {
 
   const now = new Date().toISOString().replace('T', ' ').substring(0, 19);
   const insertStmt = db.prepare(`
-    INSERT INTO reports (city, area, status, duration, created_at, ip_hash)
-    VALUES (?, ?, ?, ?, ?, ?)
+    INSERT INTO reports (city, area, status, duration, note, created_at, ip_hash)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
   `);
 
-  const result = insertStmt.run(city, area, status, duration, now, ipHash);
-  const newReport = db.prepare('SELECT id, city, area, status, duration, created_at FROM reports WHERE id = ?').get(result.lastInsertRowid);
+  const result = insertStmt.run(city, area, status, duration, note, now, ipHash);
+  const newReport = db.prepare('SELECT id, city, area, status, duration, note, created_at FROM reports WHERE id = ?').get(result.lastInsertRowid);
 
   try { notifySubscribersForReport(newReport); } catch(e){}
 
   res.status(201).json(newReport);
+});
+
+// GET /api/schedule-prediction (DISCO 24-Hour Predictor)
+app.get('/api/schedule-prediction', (req, res) => {
+  const city = req.query.city || 'Karachi';
+  const area = req.query.area || 'General';
+
+  // Standard peak load-shedding hours in Pakistan grid: 06:00-07:00, 14:00-16:00, 20:00-22:00
+  const basePeakHours = [6, 14, 15, 20, 21];
+
+  const currentHour = new Date().getHours();
+  const hourlyRisk = [];
+
+  for (let h = 0; h < 24; h++) {
+    let risk = 15; // base 15% chance
+    if (basePeakHours.includes(h)) risk += 65; // Peak hours risk boost
+    if (h === 14 || h === 20) risk += 10;
+    hourlyRisk.push({
+      hour: h,
+      label: `${h.toString().padStart(2, '0')}:00`,
+      riskPercentage: Math.min(risk, 95),
+      isPeak: basePeakHours.includes(h),
+      isCurrent: h === currentHour
+    });
+  }
+
+  const discoMap = {
+    'Karachi': 'K-Electric (KE)',
+    'Lahore': 'LESCO',
+    'Islamabad': 'IESCO',
+    'Rawalpindi': 'IESCO',
+    'Faisalabad': 'FESCO',
+    'Multan': 'MEPCO',
+    'Peshawar': 'PESCO',
+    'Quetta': 'QESCO',
+    'Hyderabad': 'HESCO',
+    'Gujranwala': 'GEPCO'
+  };
+
+  res.json({
+    city,
+    area,
+    discoName: discoMap[city] || 'DISCO Utility Grid',
+    currentRisk: hourlyRisk[currentHour].riskPercentage,
+    predictedSlots: ['06:00 - 07:00 (Morning)', '14:00 - 16:00 (Afternoon Peak)', '20:00 - 22:00 (Evening Peak)'],
+    hourlyRisk
+  });
 });
 
 // GET /api/reports
@@ -195,7 +243,7 @@ app.get('/api/reports', (req, res) => {
   const sinceTime = new Date(sinceMs).toISOString().replace('T', ' ').substring(0, 19);
   const sixtyMinAgo = new Date(sixtyMinAgoMs).toISOString().replace('T', ' ').substring(0, 19);
 
-  let query = 'SELECT id, city, area, status, duration, created_at FROM reports WHERE created_at >= ?';
+  let query = 'SELECT id, city, area, status, duration, note, created_at FROM reports WHERE created_at >= ?';
   const params = [sinceTime];
 
   if (city) {
