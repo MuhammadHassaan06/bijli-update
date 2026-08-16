@@ -27,8 +27,46 @@ function getIpHash(req) {
   return crypto.createHash('sha256').update(ip).digest('hex');
 }
 
+const DISCO_HELPLINES = {
+  'Karachi': { company: 'K-Electric (KE)', phone: '118', whatsapp: '923480000118', sms: '8118', website: 'https://www.ke.com.pk' },
+  'Lahore': { company: 'LESCO', phone: '118', whatsapp: '', sms: '8118', website: 'https://www.lesco.gov.pk' },
+  'Islamabad': { company: 'IESCO', phone: '118', whatsapp: '', sms: '8118', website: 'https://iesco.com.pk' },
+  'Rawalpindi': { company: 'IESCO', phone: '118', whatsapp: '', sms: '8118', website: 'https://iesco.com.pk' },
+  'Faisalabad': { company: 'FESCO', phone: '118', whatsapp: '', sms: '8118', website: 'http://fesco.com.pk' },
+  'Multan': { company: 'MEPCO', phone: '118', whatsapp: '', sms: '8118', website: 'http://mepco.com.pk' },
+  'Peshawar': { company: 'PESCO', phone: '118', whatsapp: '', sms: '8118', website: 'http://pesco.com.pk' },
+  'Quetta': { company: 'QESCO', phone: '118', whatsapp: '', sms: '8118', website: 'http://qesco.com.pk' },
+  'Hyderabad': { company: 'HESCO', phone: '118', whatsapp: '', sms: '8118', website: 'http://hesco.gov.pk' },
+  'Gujranwala': { company: 'GEPCO', phone: '118', whatsapp: '', sms: '8118', website: 'http://gepco.com.pk' }
+};
+
+const POPULAR_AREAS = {
+  'Karachi': ['Gulshan-e-Iqbal', 'DHA Phase 5', 'Clifton', 'PECHS', 'North Nazimabad', 'Federal B Area'],
+  'Lahore': ['Model Town', 'DHA Phase 6', 'Gulberg III', 'Johar Town', 'Ferozepur Road', 'Askari 11'],
+  'Islamabad': ['F-8 Markaz', 'G-11', 'F-10', 'I-8 Sector', 'Blue Area', 'E-11'],
+  'Rawalpindi': ['Saddar', 'Satellite Town', 'Bahria Town Phase 4', 'Westridge', 'Adyala Road'],
+  'Faisalabad': ['D Ground', 'Peoples Colony', 'Madina Town', 'Canal Road', 'Gulberg'],
+  'Multan': ['Cantonment', 'Gulgasht Colony', 'Bosna Road', 'Shah Rukn-e-Alam'],
+  'Peshawar': ['University Town', 'Hayatabad Phase 3', 'Saddar', 'Wapda Town'],
+  'Quetta': ['Chaman Housing', 'Airport Road', 'Jinnah Road', 'Cantt'],
+  'Hyderabad': ['Latifabad Unit 7', 'Qasimabad', 'Saddar', 'Auto Bhan Road'],
+  'Gujranwala': ['DC Road', 'Model Town', 'Peoples Colony', 'Satellite Town']
+};
+
 app.get('/api/cities', (req, res) => {
   res.json(CITIES);
+});
+
+app.get('/api/helplines', (req, res) => {
+  const city = req.query.city || 'Karachi';
+  const info = DISCO_HELPLINES[city] || DISCO_HELPLINES['Karachi'];
+  res.json({ city, ...info });
+});
+
+app.get('/api/popular-areas', (req, res) => {
+  const city = req.query.city || 'Karachi';
+  const areas = POPULAR_AREAS[city] || POPULAR_AREAS['Karachi'];
+  res.json(areas);
 });
 
 // POST /api/report

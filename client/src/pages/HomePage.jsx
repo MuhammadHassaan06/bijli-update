@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { translations } from '../utils/translations';
 
 const API_BASE = import.meta.env.VITE_API_BASE || '/api';
 
@@ -19,13 +20,15 @@ function pluralize(count, singular, plural) {
   return `${count} ${count === 1 ? singular : plural}`;
 }
 
-export default function HomePage() {
+export default function HomePage({ lang = 'en', selectedCity = 'Karachi', setSelectedCity, onOpenHelpline }) {
+  const t = translations[lang] || translations.en;
+
   const [cities, setCities] = useState([
     'Karachi', 'Lahore', 'Islamabad', 'Rawalpindi', 'Faisalabad',
     'Multan', 'Peshawar', 'Quetta', 'Hyderabad', 'Gujranwala'
   ]);
-  const [selectedCity, setSelectedCity] = useState('Karachi');
   const [areaInput, setAreaInput] = useState('');
+  const [popularAreas, setPopularAreas] = useState([]);
 
   const [reports, setReports] = useState([]);
   const [aggregate, setAggregate] = useState({
@@ -52,6 +55,18 @@ export default function HomePage() {
       })
       .catch(err => console.error('Failed to load cities:', err));
   }, []);
+
+  // Fetch Popular Areas for Selected City
+  useEffect(() => {
+    if (selectedCity) {
+      fetch(`${API_BASE}/popular-areas?city=${encodeURIComponent(selectedCity)}`)
+        .then(res => res.json())
+        .then(data => {
+          if (Array.isArray(data)) setPopularAreas(data);
+        })
+        .catch(err => console.error('Failed to load popular areas:', err));
+    }
+  }, [selectedCity]);
 
   // Fetch Reports function (Single Source of Truth)
   const fetchReports = () => {
@@ -130,6 +145,15 @@ export default function HomePage() {
   const isHighAlert = aggregate.netStatus === 'Likely Outage';
   const displayLocation = areaInput.trim() ? `${areaInput.trim()} (${selectedCity})` : selectedCity;
 
+  const handleShareWhatsApp = () => {
+    const statusText = isHighAlert
+      ? `🔴 Bijli Outage Alert in ${displayLocation}! Reports in the last hour indicate active power load shedding.`
+      : `🟢 Bijli Status Update: Grid in ${displayLocation} is currently reported stable.`;
+
+    const shareUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(`${statusText}\n\nTrack live updates & report power status on Bijli Update:\n${window.location.origin}`)}`;
+    window.open(shareUrl, '_blank');
+  };
+
   return (
     <div className="flex flex-col w-full pb-8">
       {/* Toast Alert for Rate Limit / Error */}
@@ -139,32 +163,47 @@ export default function HomePage() {
             <span className="material-symbols-outlined text-[20px]">warning</span>
             <span className="font-body-sm text-body-sm font-semibold">{toastMessage}</span>
           </div>
-          <button onClick={() => setToastMessage(null)} className="text-on-error opacity-80 hover:opacity-100">
+          <button onClick={() => setToastMessage(null)} className="text-on-error opacity-80 hover:opacity-100 cursor-pointer">
             <span className="material-symbols-outlined text-[18px]">close</span>
           </button>
         </div>
       )}
 
       <div className="px-container-padding py-stack-lg bg-surface flex flex-col gap-stack-lg">
-        {/* Header Section (Issue #4 Placeholder Text Fix) */}
-        <div className="flex flex-col gap-stack-sm">
-          <h1 className="font-display-lg-mobile text-display-lg-mobile text-on-surface">
-            Stay Updated in {selectedCity} 🇵🇰
-          </h1>
-          <p className="font-body-md text-body-md text-on-surface-variant">
-            Hyperlocal crowdsourced power status tracker.
-          </p>
+        {/* Header Section */}
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex flex-col gap-1">
+            <h1 className="font-display-lg-mobile text-display-lg-mobile text-on-surface">
+              {t.stayUpdated.replace('{city}', selectedCity)}
+            </h1>
+            <p className="font-body-md text-body-md text-on-surface-variant">
+              {t.subtitle}
+            </p>
+          </div>
+
+          {/* Quick Helpline trigger button */}
+          <button
+            onClick={onOpenHelpline}
+            className="shrink-0 p-2.5 bg-amber-100 text-amber-900 border border-amber-300 rounded-xl flex flex-col items-center justify-center hover:bg-amber-200 transition-colors shadow-xs cursor-pointer"
+            title={t.discoHelpline}
+          >
+            <span className="material-symbols-outlined text-[22px] text-amber-700">headset_mic</span>
+            <span className="text-[10px] font-bold mt-0.5">{t.discoHelpline}</span>
+          </button>
         </div>
 
         {/* Selection Area */}
         <div className="flex flex-col gap-stack-md bg-surface-container-lowest p-gutter rounded-xl shadow-sm">
           <div className="flex flex-col gap-stack-sm">
-            <label className="font-label-md text-label-md text-on-surface" htmlFor="city-select">City</label>
+            <label className="font-label-md text-label-md text-on-surface" htmlFor="city-select">{t.cityLabel}</label>
             <div className="relative">
               <select
                 id="city-select"
                 value={selectedCity}
-                onChange={(e) => setSelectedCity(e.target.value)}
+                onChange={(e) => {
+                  setSelectedCity(e.target.value);
+                  setAreaInput('');
+                }}
                 className="w-full appearance-none bg-surface-container-low text-on-surface font-body-md text-body-md p-stack-md pr-12 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:bg-surface-container-lowest transition-colors cursor-pointer"
               >
                 {cities.map((c) => (
@@ -178,7 +217,7 @@ export default function HomePage() {
           </div>
 
           <div className="flex flex-col gap-stack-sm">
-            <label className="font-label-md text-label-md text-on-surface" htmlFor="area-input">Area/Sector/Mohalla</label>
+            <label className="font-label-md text-label-md text-on-surface" htmlFor="area-input">{t.areaLabel}</label>
             <div className="relative">
               <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant">
                 search
@@ -188,10 +227,32 @@ export default function HomePage() {
                 type="text"
                 value={areaInput}
                 onChange={(e) => setAreaInput(e.target.value)}
-                placeholder="e.g. G-11, DHA Phase 5, Gulshan-e-Iqbal"
+                placeholder={t.areaPlaceholder}
                 className="w-full bg-surface-container-low text-on-surface font-body-md text-body-md p-stack-md pl-12 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:bg-surface-container-lowest transition-colors"
               />
             </div>
+
+            {/* Popular Area Quick Filter Chips */}
+            {popularAreas.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                <span className="text-[11px] font-semibold text-on-surface-variant opacity-80 mr-1">
+                  {t.popularAreas}
+                </span>
+                {popularAreas.map((areaName) => (
+                  <button
+                    key={areaName}
+                    onClick={() => setAreaInput(areaName === areaInput ? '' : areaName)}
+                    className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition-all border cursor-pointer ${
+                      areaInput.toLowerCase() === areaName.toLowerCase()
+                        ? 'bg-primary text-on-primary border-primary shadow-xs font-semibold'
+                        : 'bg-surface-container-low text-on-surface-variant border-surface-container-high hover:bg-surface-container'
+                    }`}
+                  >
+                    {areaName}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
@@ -206,18 +267,18 @@ export default function HomePage() {
             {submittingType === 'outage' ? (
               <>
                 <span className="material-symbols-outlined text-[32px] animate-spin">refresh</span>
-                <span className="font-headline-sm text-headline-sm">Sending...</span>
+                <span className="font-headline-sm text-headline-sm">{t.sending}</span>
               </>
             ) : successType === 'outage' ? (
               <>
                 <span className="material-symbols-outlined text-[32px]" style={{ fontVariationSettings: "'FILL' 1" }}>thumb_up</span>
-                <span className="font-headline-sm text-headline-sm">Reported!</span>
+                <span className="font-headline-sm text-headline-sm">{t.reported}</span>
               </>
             ) : (
               <>
                 <span className="material-symbols-outlined text-[32px]" style={{ fontVariationSettings: "'FILL' 1" }}>bolt</span>
-                <span className="font-headline-sm text-headline-sm">Bijli Chali Gayi</span>
-                <span className="font-label-md text-label-md opacity-80">Report Outage</span>
+                <span className="font-headline-sm text-headline-sm">{t.reportOutage}</span>
+                <span className="font-label-md text-label-md opacity-80">{t.reportOutageSub}</span>
               </>
             )}
           </button>
@@ -231,58 +292,75 @@ export default function HomePage() {
             {submittingType === 'restored' ? (
               <>
                 <span className="material-symbols-outlined text-[32px] animate-spin">refresh</span>
-                <span className="font-headline-sm text-headline-sm">Sending...</span>
+                <span className="font-headline-sm text-headline-sm">{t.sending}</span>
               </>
             ) : successType === 'restored' ? (
               <>
                 <span className="material-symbols-outlined text-[32px]" style={{ fontVariationSettings: "'FILL' 1" }}>thumb_up</span>
-                <span className="font-headline-sm text-headline-sm">Reported!</span>
+                <span className="font-headline-sm text-headline-sm">{t.reported}</span>
               </>
             ) : (
               <>
                 <span className="material-symbols-outlined text-[32px]" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
-                <span className="font-headline-sm text-headline-sm">Bijli Aa Gayi</span>
-                <span className="font-label-md text-label-md opacity-80">Report Restored</span>
+                <span className="font-headline-sm text-headline-sm">{t.reportRestored}</span>
+                <span className="font-label-md text-label-md opacity-80">{t.reportRestoredSub}</span>
               </>
             )}
           </button>
         </div>
 
-        {/* Live Status Banner (Single Source of Truth - Issue #1) */}
-        <div className="bg-surface-container-lowest rounded-xl p-gutter shadow-sm flex items-start gap-stack-md relative overflow-hidden">
+        {/* Live Status Banner */}
+        <div className="bg-surface-container-lowest rounded-xl p-gutter shadow-sm flex flex-col gap-3 relative overflow-hidden">
           <div className={`absolute left-0 top-0 bottom-0 w-1 ${isHighAlert ? 'bg-error' : 'bg-primary'}`}></div>
-          <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${isHighAlert ? 'bg-error-container text-error' : 'bg-primary-container/20 text-primary'}`}>
-            <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>
-              {isHighAlert ? 'warning' : 'check_circle'}
-            </span>
-          </div>
-          <div className="flex flex-col gap-1 flex-1">
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <h3 className="font-headline-sm text-headline-sm text-on-surface">
-                {isHighAlert ? `🔴 High Alert in ${displayLocation}` : `🟢 Grid Stable in ${displayLocation}`}
-              </h3>
-              {/* Confidence Badge (Issue #7) */}
-              {isHighAlert && (
-                <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold flex items-center gap-1 ${aggregate.confidence === 'CONFIRMED'
-                    ? 'bg-red-100 text-red-800 border border-red-300'
-                    : 'bg-amber-100 text-amber-800 border border-amber-300'
-                  }`}>
-                  <span className="material-symbols-outlined text-[12px]">
-                    {aggregate.confidence === 'CONFIRMED' ? 'verified' : 'help_outline'}
-                  </span>
-                  {aggregate.confidence === 'CONFIRMED' ? 'Confirmed Outage' : 'Unverified Report'}
-                </span>
-              )}
+
+          <div className="flex items-start gap-stack-md">
+            <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${isHighAlert ? 'bg-error-container text-error' : 'bg-primary-container/20 text-primary'}`}>
+              <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>
+                {isHighAlert ? 'warning' : 'check_circle'}
+              </span>
             </div>
-            <p className="font-body-sm text-body-sm text-on-surface-variant">
-              {isHighAlert
-                ? `${pluralize(aggregate.recentOutageCount || 1, 'outage report', 'outage reports')} in the last hour.`
-                : `Power grid operating normally based on recent community updates.`}
-            </p>
+            <div className="flex flex-col gap-1 flex-1">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <h3 className="font-headline-sm text-headline-sm text-on-surface font-bold">
+                  {isHighAlert
+                    ? t.highAlert.replace('{location}', displayLocation)
+                    : t.gridStable.replace('{location}', displayLocation)}
+                </h3>
+                {/* Confidence Badge */}
+                {isHighAlert && (
+                  <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold flex items-center gap-1 ${
+                    aggregate.confidence === 'CONFIRMED'
+                      ? 'bg-red-100 text-red-800 border border-red-300'
+                      : 'bg-amber-100 text-amber-800 border border-amber-300'
+                  }`}>
+                    <span className="material-symbols-outlined text-[12px]">
+                      {aggregate.confidence === 'CONFIRMED' ? 'verified' : 'help_outline'}
+                    </span>
+                    {aggregate.confidence === 'CONFIRMED' ? t.confirmedOutage : t.unverifiedReport}
+                  </span>
+                )}
+              </div>
+              <p className="font-body-sm text-body-sm text-on-surface-variant">
+                {isHighAlert
+                  ? t.recentOutageDesc.replace('{count}', pluralize(aggregate.recentOutageCount || 1, 'outage report', 'outage reports'))
+                  : t.gridStableDesc}
+              </p>
+            </div>
+          </div>
+
+          {/* 1-Tap WhatsApp Share Button */}
+          <div className="pt-2 border-t border-surface-container flex justify-end">
+            <button
+              onClick={handleShareWhatsApp}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-body-sm font-semibold transition-colors shadow-xs cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[18px]">share</span>
+              <span>{t.shareWhatsApp}</span>
+            </button>
           </div>
         </div>
 
-        {/* API Error State Banner (Issue #8) */}
+        {/* API Error State Banner */}
         {apiError && (
           <div className="bg-amber-50 border border-amber-300 text-amber-900 rounded-xl p-4 flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -291,7 +369,7 @@ export default function HomePage() {
             </div>
             <button
               onClick={fetchReports}
-              className="px-3 py-1 bg-amber-600 text-white text-body-sm rounded-lg font-semibold hover:bg-amber-700 transition-colors"
+              className="px-3 py-1 bg-amber-600 text-white text-body-sm rounded-lg font-semibold hover:bg-amber-700 transition-colors cursor-pointer"
             >
               Retry
             </button>
@@ -301,15 +379,14 @@ export default function HomePage() {
         {/* Recent Activity Feed */}
         <div className="flex flex-col gap-stack-md mt-4">
           <div className="flex items-center justify-between">
-            <h2 className="font-headline-md text-headline-md text-on-surface">Live Feed</h2>
+            <h2 className="font-headline-md text-headline-md text-on-surface">{t.liveFeed}</h2>
             <span className="flex items-center gap-1 font-label-md text-label-md text-primary bg-primary-container/10 px-2.5 py-1 rounded-full">
               <span className="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
-              Live
+              {t.liveTag}
             </span>
           </div>
 
           <div className="bg-surface-container-lowest rounded-xl shadow-sm flex flex-col divide-y divide-surface-container-highest overflow-hidden">
-            {/* Skeleton Loading State (Issue #8) */}
             {loadingFeed ? (
               <div className="p-gutter flex flex-col gap-4 animate-pulse">
                 {[1, 2, 3].map((i) => (
@@ -326,14 +403,15 @@ export default function HomePage() {
                 ))}
               </div>
             ) : reports.length === 0 ? (
-              /* Empty State (Issue #8) */
               <div className="p-8 text-center flex flex-col items-center gap-3 text-on-surface-variant">
                 <div className="w-12 h-12 rounded-full bg-surface-container-high flex items-center justify-center">
                   <span className="material-symbols-outlined text-[24px]">power_off</span>
                 </div>
                 <div>
-                  <p className="font-body-md text-on-surface font-semibold">No recent reports for {displayLocation}</p>
-                  <p className="font-body-sm text-on-surface-variant mt-1">Be the first to report power status in your area!</p>
+                  <p className="font-body-md text-on-surface font-semibold">
+                    {t.noReports.replace('{location}', displayLocation)}
+                  </p>
+                  <p className="font-body-sm text-on-surface-variant mt-1">{t.beFirst}</p>
                 </div>
               </div>
             ) : (
@@ -353,16 +431,16 @@ export default function HomePage() {
                           <span className="font-body-md text-body-md text-on-surface font-semibold truncate">
                             {item.area} <span className="text-on-surface-variant font-normal text-body-sm">({item.city})</span>
                           </span>
-                          {/* Item Confidence Badge (Issue #7) */}
-                          <span className={`px-1.5 py-0.2 rounded text-[10px] font-semibold border ${isConfirmed
+                          <span className={`px-1.5 py-0.2 rounded text-[10px] font-semibold border ${
+                            isConfirmed
                               ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                               : 'bg-slate-100 text-slate-600 border-slate-200'
-                            }`}>
-                            {isConfirmed ? 'Confirmed' : 'Unverified'}
+                          }`}>
+                            {isConfirmed ? t.confirmed : t.unverified}
                           </span>
                         </div>
                         <span className={`font-label-md text-label-md ${isOutage ? 'text-error' : 'text-primary'}`}>
-                          {isOutage ? 'Outage Reported' : 'Power Restored'}
+                          {isOutage ? t.outageReported : t.powerRestored}
                         </span>
                       </div>
                     </div>

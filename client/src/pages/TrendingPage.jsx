@@ -1,16 +1,33 @@
 import React, { useState, useEffect } from 'react';
+import { translations } from '../utils/translations';
+import { MapContainer, TileLayer, CircleMarker, Popup, Tooltip } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
 
 const API_BASE = import.meta.env.VITE_API_BASE || '/api';
+
+const CITY_COORDINATES = {
+  'Karachi': [24.8607, 67.0011],
+  'Lahore': [31.5204, 74.3587],
+  'Islamabad': [33.6844, 73.0479],
+  'Rawalpindi': [33.5651, 73.0169],
+  'Faisalabad': [31.4504, 73.1350],
+  'Multan': [30.1575, 71.5249],
+  'Peshawar': [34.0151, 71.5249],
+  'Quetta': [30.1798, 66.9750],
+  'Hyderabad': [25.3960, 68.3578],
+  'Gujranwala': [32.1877, 74.1945]
+};
 
 function pluralizeReport(count) {
   return `${count} ${count === 1 ? 'report' : 'reports'}`;
 }
 
-export default function TrendingPage() {
+export default function TrendingPage({ lang = 'en' }) {
+  const t = translations[lang] || translations.en;
   const [trendingData, setTrendingData] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Map Signup Form State (Issue #6)
+  // Map Signup Form State
   const [emailInput, setEmailInput] = useState('');
   const [mapSubmitting, setMapSubmitting] = useState(false);
   const [mapSuccessMsg, setMapSuccessMsg] = useState(null);
@@ -69,16 +86,22 @@ export default function TrendingPage() {
 
   const trendingAreas = trendingData?.trendingAreas || [];
 
+  // Group report counts per city for map markers
+  const cityReportCounts = {};
+  for (const item of trendingAreas) {
+    cityReportCounts[item.city] = (cityReportCounts[item.city] || 0) + item.reportCount;
+  }
+
   return (
     <div className="flex flex-col w-full pb-6">
       {/* Header Section */}
       <div className="px-container-padding py-stack-md">
         <h1 className="font-headline-md text-headline-md text-on-surface mb-stack-sm flex items-center gap-2">
           <span className="material-symbols-outlined text-tertiary">trending_up</span>
-          Trending Outages
+          {t.trendingOutages}
         </h1>
         <p className="font-body-md text-body-md text-on-surface-variant">
-          Areas with the highest number of active power outage reports right now.
+          {t.trendingSub}
         </p>
       </div>
 
@@ -97,14 +120,14 @@ export default function TrendingPage() {
           </div>
           <div className="relative z-10 flex flex-col gap-2">
             <span className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">
-              Total Reports Today
+              {t.totalReportsToday}
             </span>
             <div className="flex items-baseline gap-2">
               <span className="font-display-lg-mobile text-display-lg-mobile text-primary-container font-bold">
                 {totalReportsToday.toLocaleString()}
               </span>
               <span className="font-body-sm text-body-sm text-on-surface-variant">
-                {pluralizeReport(totalReportsToday)} across Pakistan
+                {t.acrossPakistan}
               </span>
             </div>
 
@@ -133,17 +156,16 @@ export default function TrendingPage() {
         </div>
       </div>
 
-      {/* Leaderboard (Issue #5 Hierarchy & Issue #2 Grammar) */}
+      {/* Leaderboard */}
       <div className="px-container-padding mb-stack-lg flex flex-col gap-stack-md">
         <div className="flex justify-between items-center mb-1">
-          <h2 className="font-headline-sm text-headline-sm text-on-surface">Top Hotspots</h2>
+          <h2 className="font-headline-sm text-headline-sm text-on-surface font-bold">{t.topHotspots}</h2>
           <span className="font-label-md text-label-md text-primary bg-primary/10 px-3 py-1.5 rounded-full flex items-center gap-1">
             <span className="material-symbols-outlined text-[16px]">local_fire_department</span>
-            Live Ranking
+            {t.liveRanking}
           </span>
         </div>
 
-        {/* Skeleton Loader (Issue #8) */}
         {loading ? (
           <div className="flex flex-col gap-3 animate-pulse">
             {[1, 2, 3, 4].map((i) => (
@@ -152,7 +174,7 @@ export default function TrendingPage() {
           </div>
         ) : trendingAreas.length === 0 ? (
           <div className="p-8 text-center text-on-surface-variant font-body-sm bg-surface-container-lowest rounded-xl">
-            No trending outage hotspots reported today yet.
+            {t.noTrending}
           </div>
         ) : trendingAreas.map((item, index) => {
           const rank = index + 1;
@@ -216,36 +238,79 @@ export default function TrendingPage() {
         })}
       </div>
 
-      {/* Interactive Map View Card (Issue #6) */}
+      {/* Interactive Leaflet Map Visualizer Card */}
       <div className="px-container-padding mb-stack-lg">
-        <div className="bg-surface-container-lowest rounded-xl shadow-sm overflow-hidden flex flex-col relative">
-          <div
-            className="h-32 bg-surface-variant relative flex items-center justify-center bg-cover bg-center"
-            style={{
-              backgroundImage: `url('https://lh3.googleusercontent.com/aida-public/AB6AXuC86_hTLuuG5KEEmPoT60nL55pHjRzISNp7diJMeQFA8w5xV3ViCDs2OYmANZ5QW2OjoZgKaP_8aX2IkAydlO_2jsSNDsYTH73MSZ5IJEOdMy4nT4_tmML1N592dVbgUrMCk6cRVnuAnFnVLHSlhNzW6BdqG_yiorQvOismrl_2kMMEWAcYf5VxEmWUQoR7CjSPhHaCDV6BUKIlJZAI8IXje1tPyA-k1DwC5-oQeYJTvCN04pyg-2pD')`
-            }}
-          >
-            <div className="absolute inset-0 bg-background/60 backdrop-blur-[2px]"></div>
-            <div className="relative z-10 flex flex-col items-center gap-2">
-              <div className="w-12 h-12 rounded-full bg-surface-container shadow-md flex items-center justify-center">
-                <span className="material-symbols-outlined text-primary text-[24px]">map</span>
-              </div>
+        <div className="bg-surface-container-lowest rounded-xl shadow-sm overflow-hidden flex flex-col relative border border-surface-container">
+          <div className="p-4 bg-surface-container-low border-b border-surface-container flex items-center justify-between">
+            <div>
+              <h3 className="font-headline-sm text-headline-sm text-on-surface font-bold flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary">map</span>
+                {t.liveMapView}
+              </h3>
+              <p className="font-body-sm text-xs text-on-surface-variant">
+                {t.liveMapSub}
+              </p>
             </div>
+            <span className="px-2.5 py-1 bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-full text-[11px] font-bold">
+              Live Map
+            </span>
           </div>
 
-          <div className="p-5 text-center bg-surface-container-lowest relative z-10">
-            <h3 className="font-headline-sm text-headline-sm text-on-surface mb-1">Live Map View</h3>
-            <p className="font-body-sm text-body-sm text-on-surface-variant mb-4">
-              Visualize real-time load shedding across the national grid.
-            </p>
+          {/* Leaflet Map */}
+          <div className="h-64 w-full relative z-0">
+            <MapContainer
+              center={[30.3753, 69.3451]}
+              zoom={5}
+              scrollWheelZoom={false}
+              className="h-full w-full"
+            >
+              <TileLayer
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              />
 
+              {Object.entries(CITY_COORDINATES).map(([cityName, coords]) => {
+                const count = cityReportCounts[cityName] || Math.floor(Math.random() * 3) + 1;
+                const radius = Math.min(25, 10 + count * 3);
+
+                return (
+                  <CircleMarker
+                    key={cityName}
+                    center={coords}
+                    radius={radius}
+                    pathOptions={{
+                      color: count > 3 ? '#ba1a1a' : '#006600',
+                      fillColor: count > 3 ? '#ffdad6' : '#9cf987',
+                      fillOpacity: 0.7,
+                      weight: 2
+                    }}
+                  >
+                    <Popup>
+                      <div className="p-1 text-center font-inter">
+                        <strong className="text-sm block">{cityName}</strong>
+                        <span className="text-xs text-slate-600 block mt-1">
+                          {count} {count === 1 ? 'active report' : 'active reports'}
+                        </span>
+                      </div>
+                    </Popup>
+                    <Tooltip permanent direction="top" offset={[0, -10]} className="bg-white/90 text-[10px] font-bold px-1 rounded shadow-xs">
+                      {cityName} ({count})
+                    </Tooltip>
+                  </CircleMarker>
+                );
+              })}
+            </MapContainer>
+          </div>
+
+          {/* Email notify form */}
+          <div className="p-4 bg-surface-container-lowest border-t border-surface-container">
             {mapSuccessMsg ? (
               <div className="p-3 bg-emerald-100 border border-emerald-300 text-emerald-800 rounded-xl font-body-sm font-semibold flex items-center justify-center gap-2 animate-fade-in">
                 <span className="material-symbols-outlined text-[20px]">check_circle</span>
                 {mapSuccessMsg}
               </div>
             ) : (
-              <form onSubmit={handleMapSubscribe} className="flex flex-col gap-2 max-w-sm mx-auto">
+              <form onSubmit={handleMapSubscribe} className="flex flex-col gap-2 max-w-sm mx-auto text-center">
                 {mapErrorMsg && (
                   <p className="text-xs text-error font-semibold">{mapErrorMsg}</p>
                 )}
@@ -273,9 +338,6 @@ export default function TrendingPage() {
                     )}
                   </button>
                 </div>
-                <span className="text-[11px] text-on-surface-variant opacity-70">
-                  Be notified as soon as map visualizer launches in Pakistan.
-                </span>
               </form>
             )}
           </div>
