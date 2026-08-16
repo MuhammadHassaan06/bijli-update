@@ -5,110 +5,135 @@ let useMemoryStore = false;
 
 // Sample initial data for fallback
 const sampleReports = [
-  { id: 1, city: 'Karachi', area: 'Gulshan-e-Iqbal', status: 'OUTAGE', created_at: new Date(Date.now() - 2 * 60000).toISOString(), ip_hash: 'seed_1' },
-  { id: 2, city: 'Lahore', area: 'Model Town', status: 'OUTAGE', created_at: new Date(Date.now() - 5 * 60000).toISOString(), ip_hash: 'seed_2' },
-  { id: 3, city: 'Islamabad', area: 'F-8 Markaz', status: 'RESTORED', created_at: new Date(Date.now() - 8 * 60000).toISOString(), ip_hash: 'seed_3' },
-  { id: 4, city: 'Karachi', area: 'DHA Phase 5', status: 'OUTAGE', created_at: new Date(Date.now() - 10 * 60000).toISOString(), ip_hash: 'seed_4' },
-  { id: 5, city: 'Rawalpindi', area: 'Saddar', status: 'OUTAGE', created_at: new Date(Date.now() - 12 * 60000).toISOString(), ip_hash: 'seed_5' },
-  { id: 6, city: 'Islamabad', area: 'G-11', status: 'OUTAGE', created_at: new Date(Date.now() - 15 * 60000).toISOString(), ip_hash: 'seed_6' },
-  { id: 7, city: 'Karachi', area: 'Gulshan-e-Iqbal', status: 'OUTAGE', created_at: new Date(Date.now() - 18 * 60000).toISOString(), ip_hash: 'seed_7' },
-  { id: 8, city: 'Peshawar', area: 'University Town', status: 'OUTAGE', created_at: new Date(Date.now() - 25 * 60000).toISOString(), ip_hash: 'seed_8' },
-  { id: 9, city: 'Faisalabad', area: 'D Ground', status: 'RESTORED', created_at: new Date(Date.now() - 30 * 60000).toISOString(), ip_hash: 'seed_9' },
-  { id: 10, city: 'Multan', area: 'Cantonment', status: 'RESTORED', created_at: new Date(Date.now() - 45 * 60000).toISOString(), ip_hash: 'seed_10' }
+  { id: 1, city: 'Karachi', area: 'Gulshan-e-Iqbal', status: 'OUTAGE', duration: '1 Hour', note: null, created_at: new Date(Date.now() - 2 * 60000).toISOString(), ip_hash: 'seed_1' },
+  { id: 2, city: 'Lahore', area: 'Model Town', status: 'OUTAGE', duration: '2 Hours', note: null, created_at: new Date(Date.now() - 5 * 60000).toISOString(), ip_hash: 'seed_2' },
+  { id: 3, city: 'Islamabad', area: 'F-8 Markaz', status: 'RESTORED', duration: 'Resolved', note: null, created_at: new Date(Date.now() - 8 * 60000).toISOString(), ip_hash: 'seed_3' },
+  { id: 4, city: 'Karachi', area: 'DHA Phase 5', status: 'OUTAGE', duration: '3+ Hours', note: null, created_at: new Date(Date.now() - 10 * 60000).toISOString(), ip_hash: 'seed_4' },
+  { id: 5, city: 'Rawalpindi', area: 'Saddar', status: 'OUTAGE', duration: '1 Hour', note: null, created_at: new Date(Date.now() - 12 * 60000).toISOString(), ip_hash: 'seed_5' },
+  { id: 6, city: 'Islamabad', area: 'G-11', status: 'OUTAGE', duration: 'Unscheduled', note: null, created_at: new Date(Date.now() - 15 * 60000).toISOString(), ip_hash: 'seed_6' },
+  { id: 7, city: 'Karachi', area: 'Gulshan-e-Iqbal', status: 'OUTAGE', duration: '1 Hour', note: null, created_at: new Date(Date.now() - 18 * 60000).toISOString(), ip_hash: 'seed_7' },
+  { id: 8, city: 'Peshawar', area: 'University Town', status: 'OUTAGE', duration: '2 Hours', note: null, created_at: new Date(Date.now() - 25 * 60000).toISOString(), ip_hash: 'seed_8' },
+  { id: 9, city: 'Faisalabad', area: 'D Ground', status: 'RESTORED', duration: 'Resolved', note: null, created_at: new Date(Date.now() - 30 * 60000).toISOString(), ip_hash: 'seed_9' },
+  { id: 10, city: 'Multan', area: 'Cantonment', status: 'RESTORED', duration: 'Resolved', note: null, created_at: new Date(Date.now() - 45 * 60000).toISOString(), ip_hash: 'seed_10' }
 ];
 
 let inMemoryReports = [...sampleReports];
 let inMemorySubscribers = [];
 let nextReportId = 11;
 
-try {
-  const Database = require('better-sqlite3');
-  const isVercel = Boolean(process.env.VERCEL);
-  const dbPath = isVercel ? '/tmp/bijli.db' : path.join(__dirname, 'bijli.db');
+if (process.env.VERCEL) {
+  useMemoryStore = true;
+} else {
+  try {
+    const Database = require('better-sqlite3');
+    const dbPath = path.join(__dirname, 'bijli.db');
 
-  db = new Database(dbPath);
-
-  if (!isVercel) {
+    db = new Database(dbPath);
     db.pragma('journal_mode = WAL');
-  }
 
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS reports (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      city TEXT NOT NULL,
-      area TEXT NOT NULL,
-      status TEXT NOT NULL,
-      duration TEXT DEFAULT 'Unscheduled',
-      note TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      ip_hash TEXT NOT NULL
-    );
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS reports (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        city TEXT NOT NULL,
+        area TEXT NOT NULL,
+        status TEXT NOT NULL,
+        duration TEXT DEFAULT 'Unscheduled',
+        note TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        ip_hash TEXT NOT NULL
+      );
 
-    CREATE TABLE IF NOT EXISTS map_subscribers (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      email TEXT,
-      phone TEXT,
-      city TEXT DEFAULT 'Karachi',
-      area TEXT DEFAULT 'General',
-      channel TEXT DEFAULT 'email',
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
-  `);
-
-  try { db.exec(`ALTER TABLE map_subscribers ADD COLUMN phone TEXT`); } catch (e) {}
-  try { db.exec(`ALTER TABLE map_subscribers ADD COLUMN city TEXT DEFAULT 'Karachi'`); } catch (e) {}
-  try { db.exec(`ALTER TABLE map_subscribers ADD COLUMN area TEXT DEFAULT 'General'`); } catch (e) {}
-  try { db.exec(`ALTER TABLE map_subscribers ADD COLUMN channel TEXT DEFAULT 'email'`); } catch (e) {}
-
-  try { db.exec(`ALTER TABLE reports ADD COLUMN duration TEXT DEFAULT 'Unscheduled'`); } catch (e) {}
-  try { db.exec(`ALTER TABLE reports ADD COLUMN note TEXT`); } catch (e) {}
-
-  const countStmt = db.prepare('SELECT COUNT(*) as count FROM reports');
-  const { count } = countStmt.get();
-
-  if (count === 0) {
-    const insertStmt = db.prepare(`
-      INSERT INTO reports (city, area, status, created_at, ip_hash)
-      VALUES (@city, @area, @status, @created_at, @ip_hash)
+      CREATE TABLE IF NOT EXISTS map_subscribers (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        email TEXT,
+        phone TEXT,
+        city TEXT DEFAULT 'Karachi',
+        area TEXT DEFAULT 'General',
+        channel TEXT DEFAULT 'email',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
     `);
 
-    const seedTransaction = db.transaction((reports) => {
-      for (const r of reports) {
-        insertStmt.run({
-          city: r.city,
-          area: r.area,
-          status: r.status,
-          created_at: r.created_at.replace('T', ' ').substring(0, 19),
-          ip_hash: r.ip_hash
-        });
-      }
-    });
+    try { db.exec(`ALTER TABLE map_subscribers ADD COLUMN phone TEXT`); } catch (e) {}
+    try { db.exec(`ALTER TABLE map_subscribers ADD COLUMN city TEXT DEFAULT 'Karachi'`); } catch (e) {}
+    try { db.exec(`ALTER TABLE map_subscribers ADD COLUMN area TEXT DEFAULT 'General'`); } catch (e) {}
+    try { db.exec(`ALTER TABLE map_subscribers ADD COLUMN channel TEXT DEFAULT 'email'`); } catch (e) {}
 
-    seedTransaction(sampleReports);
+    try { db.exec(`ALTER TABLE reports ADD COLUMN duration TEXT DEFAULT 'Unscheduled'`); } catch (e) {}
+    try { db.exec(`ALTER TABLE reports ADD COLUMN note TEXT`); } catch (e) {}
+
+    const countStmt = db.prepare('SELECT COUNT(*) as count FROM reports');
+    const { count } = countStmt.get();
+
+    if (count === 0) {
+      const insertStmt = db.prepare(`
+        INSERT INTO reports (city, area, status, created_at, ip_hash)
+        VALUES (@city, @area, @status, @created_at, @ip_hash)
+      `);
+
+      const seedTransaction = db.transaction((reports) => {
+        for (const r of reports) {
+          insertStmt.run({
+            city: r.city,
+            area: r.area,
+            status: r.status,
+            created_at: r.created_at,
+            ip_hash: r.ip_hash
+          });
+        }
+      });
+
+      seedTransaction(sampleReports);
+    }
+  } catch (err) {
+    console.warn('better-sqlite3 failed to initialize, using in-memory store:', err.message);
+    useMemoryStore = true;
   }
-} catch (err) {
-  console.warn('better-sqlite3 loading failed, falling back to in-memory database:', err.message);
-  useMemoryStore = true;
+}
+
+function getDb() {
+  if (useMemoryStore || !db) {
+    throw new Error('Database is in memory mode');
+  }
+  return db;
+}
+
+function isMemoryStore() {
+  return useMemoryStore;
 }
 
 module.exports = {
-  isMemoryStore: () => useMemoryStore,
-  getDb: () => db,
+  getDb,
+  isMemoryStore,
   memory: {
-    reports: inMemoryReports,
-    subscribers: inMemorySubscribers,
-    addReport: (report) => {
-      const newRep = { id: nextReportId++, ...report, created_at: new Date().toISOString() };
-      inMemoryReports.unshift(newRep);
-      return newRep;
+    get reports() { return inMemoryReports; },
+    get subscribers() { return inMemorySubscribers; },
+    addReport: (reportData) => {
+      const newReport = {
+        id: nextReportId++,
+        city: reportData.city,
+        area: reportData.area,
+        status: reportData.status,
+        duration: reportData.duration || 'Unscheduled',
+        note: reportData.note || null,
+        created_at: new Date().toISOString(),
+        ip_hash: reportData.ip_hash || 'anon'
+      };
+      inMemoryReports.unshift(newReport);
+      return newReport;
     },
-    addSubscriber: (sub) => {
-      const subObj = typeof sub === 'string' ? { contact: sub, channel: 'email', city: 'Karachi', area: 'General' } : sub;
-      const exists = inMemorySubscribers.some(s => (typeof s === 'object' ? s.contact : s) === subObj.contact);
-      if (!exists) {
-        inMemorySubscribers.push({ ...subObj, created_at: new Date().toISOString() });
-      }
-      return subObj;
+    addSubscriber: (subData) => {
+      const newSub = {
+        id: Date.now(),
+        email: subData.email || null,
+        phone: subData.phone || null,
+        city: subData.city || 'Karachi',
+        area: subData.area || 'General',
+        channel: subData.channel || 'email',
+        created_at: new Date().toISOString()
+      };
+      inMemorySubscribers.push(newSub);
+      return newSub;
     }
   }
 };

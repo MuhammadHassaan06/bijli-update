@@ -601,6 +601,12 @@ app.post('/api/notify-map', async (req, res) => {
   });
 });
 
+// Global Error Handler for Vercel Serverless Functions
+app.use((err, req, res, next) => {
+  console.error('Server error:', err);
+  res.status(500).json({ error: err.message || 'Server error' });
+});
+
 if (!process.env.VERCEL) {
   app.listen(PORT, () => {
     console.log(`Bijli Update server listening on port ${PORT}`);
