@@ -87,6 +87,8 @@ app.post('/api/report', (req, res) => {
 
   const ipHash = getIpHash(req);
 
+  let duration = req.body.duration || 'Unscheduled';
+
   if (dbModule.isMemoryStore()) {
     const fiveMinAgo = Date.now() - 5 * 60 * 1000;
     const recentSame = dbModule.memory.reports.filter(r => 
@@ -101,7 +103,7 @@ app.post('/api/report', (req, res) => {
       });
     }
 
-    const newRep = dbModule.memory.addReport({ city, area, status, ip_hash: ipHash });
+    const newRep = dbModule.memory.addReport({ city, area, status, duration, ip_hash: ipHash });
     return res.status(201).json(newRep);
   }
 
@@ -123,12 +125,12 @@ app.post('/api/report', (req, res) => {
 
   const now = new Date().toISOString().replace('T', ' ').substring(0, 19);
   const insertStmt = db.prepare(`
-    INSERT INTO reports (city, area, status, created_at, ip_hash)
-    VALUES (?, ?, ?, ?, ?)
+    INSERT INTO reports (city, area, status, duration, created_at, ip_hash)
+    VALUES (?, ?, ?, ?, ?, ?)
   `);
 
-  const result = insertStmt.run(city, area, status, now, ipHash);
-  const newReport = db.prepare('SELECT id, city, area, status, created_at FROM reports WHERE id = ?').get(result.lastInsertRowid);
+  const result = insertStmt.run(city, area, status, duration, now, ipHash);
+  const newReport = db.prepare('SELECT id, city, area, status, duration, created_at FROM reports WHERE id = ?').get(result.lastInsertRowid);
 
   res.status(201).json(newReport);
 });
@@ -190,7 +192,7 @@ app.get('/api/reports', (req, res) => {
   const sinceTime = new Date(sinceMs).toISOString().replace('T', ' ').substring(0, 19);
   const sixtyMinAgo = new Date(sixtyMinAgoMs).toISOString().replace('T', ' ').substring(0, 19);
 
-  let query = 'SELECT id, city, area, status, created_at FROM reports WHERE created_at >= ?';
+  let query = 'SELECT id, city, area, status, duration, created_at FROM reports WHERE created_at >= ?';
   const params = [sinceTime];
 
   if (city) {

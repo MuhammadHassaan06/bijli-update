@@ -1,31 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { translations } from '../utils/translations';
-import { MapContainer, TileLayer, CircleMarker, Popup, Tooltip } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
+import OutageMap from '../components/OutageMap';
 
 const API_BASE = import.meta.env.VITE_API_BASE || '/api';
-
-const CITY_COORDINATES = {
-  'Karachi': [24.8607, 67.0011],
-  'Lahore': [31.5204, 74.3587],
-  'Islamabad': [33.6844, 73.0479],
-  'Rawalpindi': [33.5651, 73.0169],
-  'Faisalabad': [31.4504, 73.1350],
-  'Multan': [30.1575, 71.5249],
-  'Peshawar': [34.0151, 71.5249],
-  'Quetta': [30.1798, 66.9750],
-  'Hyderabad': [25.3960, 68.3578],
-  'Gujranwala': [32.1877, 74.1945]
-};
 
 function pluralizeReport(count) {
   return `${count} ${count === 1 ? 'report' : 'reports'}`;
 }
 
-export default function TrendingPage({ lang = 'en' }) {
+export default function TrendingPage({ lang = 'en', onSelectCity }) {
   const t = translations[lang] || translations.en;
   const [trendingData, setTrendingData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [selectedCityFilter, setSelectedCityFilter] = useState('All');
 
   // Map Signup Form State
   const [emailInput, setEmailInput] = useState('');
@@ -34,7 +21,7 @@ export default function TrendingPage({ lang = 'en' }) {
   const [mapErrorMsg, setMapErrorMsg] = useState(null);
 
   useEffect(() => {
-    fetch(`${API_BASE}/trending?limit=10`)
+    fetch(`${API_BASE}/trending?limit=15`)
       .then(res => res.json())
       .then(data => {
         setTrendingData(data);
@@ -84,19 +71,26 @@ export default function TrendingPage({ lang = 'en' }) {
   const scheduledPct = Math.round((statusDist.scheduled / totalDist) * 100) || 25;
   const resolvedPct = 100 - activePct - scheduledPct;
 
-  const trendingAreas = trendingData?.trendingAreas || [];
+  const rawTrendingAreas = trendingData?.trendingAreas || [];
 
   // Group report counts per city for map markers
   const cityReportCounts = {};
-  for (const item of trendingAreas) {
+  for (const item of rawTrendingAreas) {
     cityReportCounts[item.city] = (cityReportCounts[item.city] || 0) + item.reportCount;
   }
+
+  // Filter leaderboard by selected city
+  const filteredTrendingAreas = selectedCityFilter === 'All'
+    ? rawTrendingAreas
+    : rawTrendingAreas.filter(a => a.city.toLowerCase() === selectedCityFilter.toLowerCase());
+
+  const availableCities = ['All', ...new Set(rawTrendingAreas.map(a => a.city))];
 
   return (
     <div className="flex flex-col w-full pb-6">
       {/* Header Section */}
       <div className="px-container-padding py-stack-md">
-        <h1 className="font-headline-md text-headline-md text-on-surface mb-stack-sm flex items-center gap-2">
+        <h1 className="font-headline-md text-headline-md text-on-surface mb-stack-sm flex items-center gap-2 font-bold">
           <span className="material-symbols-outlined text-tertiary">trending_up</span>
           {t.trendingOutages}
         </h1>
@@ -105,9 +99,18 @@ export default function TrendingPage({ lang = 'en' }) {
         </p>
       </div>
 
+      {/* Realistic GIS Outage Map */}
+      <div className="px-container-padding mb-stack-lg">
+        <OutageMap
+          cityReportCounts={cityReportCounts}
+          lang={lang}
+          onSelectCity={onSelectCity}
+        />
+      </div>
+
       {/* Summary Statistics */}
       <div className="px-container-padding mb-stack-lg">
-        <div className="bg-surface-container rounded-xl p-4 shadow-sm relative overflow-hidden">
+        <div className="bg-surface-container rounded-xl p-4 shadow-sm relative overflow-hidden border border-surface-container">
           <div className="absolute inset-0 opacity-10 pointer-events-none">
             <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
               <defs>
@@ -119,7 +122,7 @@ export default function TrendingPage({ lang = 'en' }) {
             </svg>
           </div>
           <div className="relative z-10 flex flex-col gap-2">
-            <span className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">
+            <span className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider font-bold">
               {t.totalReportsToday}
             </span>
             <div className="flex items-baseline gap-2">
@@ -132,7 +135,7 @@ export default function TrendingPage({ lang = 'en' }) {
             </div>
 
             {/* Progress/Status Bar */}
-            <div className="mt-2 flex gap-1 h-2 rounded-full overflow-hidden bg-surface-variant">
+            <div className="mt-2 flex gap-1 h-2.5 rounded-full overflow-hidden bg-surface-variant">
               <div className="bg-tertiary h-full rounded-l-full transition-all duration-500" style={{ width: `${activePct}%` }}></div>
               <div className="bg-secondary-container h-full transition-all duration-500" style={{ width: `${scheduledPct}%` }}></div>
               <div className="bg-primary-container h-full rounded-r-full transition-all duration-500" style={{ width: `${resolvedPct}%` }}></div>
@@ -140,16 +143,16 @@ export default function TrendingPage({ lang = 'en' }) {
 
             <div className="flex justify-between mt-1 px-1">
               <div className="flex items-center gap-1">
-                <div className="w-2 h-2 rounded-full bg-tertiary"></div>
-                <span className="font-label-md text-[10px] text-on-surface-variant">Active ({activePct}%)</span>
+                <div className="w-2.5 h-2.5 rounded-full bg-tertiary"></div>
+                <span className="font-label-md text-[11px] text-on-surface-variant font-semibold">Active ({activePct}%)</span>
               </div>
               <div className="flex items-center gap-1">
-                <div className="w-2 h-2 rounded-full bg-secondary-container"></div>
-                <span className="font-label-md text-[10px] text-on-surface-variant">Scheduled ({scheduledPct}%)</span>
+                <div className="w-2.5 h-2.5 rounded-full bg-secondary-container"></div>
+                <span className="font-label-md text-[11px] text-on-surface-variant font-semibold">Scheduled ({scheduledPct}%)</span>
               </div>
               <div className="flex items-center gap-1">
-                <div className="w-2 h-2 rounded-full bg-primary-container"></div>
-                <span className="font-label-md text-[10px] text-on-surface-variant">Resolved ({resolvedPct}%)</span>
+                <div className="w-2.5 h-2.5 rounded-full bg-primary-container"></div>
+                <span className="font-label-md text-[11px] text-on-surface-variant font-semibold">Resolved ({resolvedPct}%)</span>
               </div>
             </div>
           </div>
@@ -158,12 +161,33 @@ export default function TrendingPage({ lang = 'en' }) {
 
       {/* Leaderboard */}
       <div className="px-container-padding mb-stack-lg flex flex-col gap-stack-md">
-        <div className="flex justify-between items-center mb-1">
-          <h2 className="font-headline-sm text-headline-sm text-on-surface font-bold">{t.topHotspots}</h2>
-          <span className="font-label-md text-label-md text-primary bg-primary/10 px-3 py-1.5 rounded-full flex items-center gap-1">
-            <span className="material-symbols-outlined text-[16px]">local_fire_department</span>
-            {t.liveRanking}
-          </span>
+        <div className="flex flex-col gap-2">
+          <div className="flex justify-between items-center">
+            <h2 className="font-headline-sm text-headline-sm text-on-surface font-bold">{t.topHotspots}</h2>
+            <span className="font-label-md text-label-md text-primary bg-primary/10 px-3 py-1.5 rounded-full flex items-center gap-1 font-semibold">
+              <span className="material-symbols-outlined text-[16px]">local_fire_department</span>
+              {t.liveRanking}
+            </span>
+          </div>
+
+          {/* City Filter Tabs */}
+          {availableCities.length > 1 && (
+            <div className="flex gap-1.5 overflow-x-auto no-scrollbar py-1">
+              {availableCities.map(c => (
+                <button
+                  key={c}
+                  onClick={() => setSelectedCityFilter(c)}
+                  className={`px-3 py-1 rounded-full text-xs font-bold shrink-0 transition-all border cursor-pointer ${
+                    selectedCityFilter === c
+                      ? 'bg-primary text-on-primary border-primary shadow-xs'
+                      : 'bg-surface-container-lowest text-on-surface-variant border-surface-container-high hover:bg-surface-container'
+                  }`}
+                >
+                  {c}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {loading ? (
@@ -172,11 +196,11 @@ export default function TrendingPage({ lang = 'en' }) {
               <div key={i} className="h-20 bg-surface-container-high rounded-xl"></div>
             ))}
           </div>
-        ) : trendingAreas.length === 0 ? (
-          <div className="p-8 text-center text-on-surface-variant font-body-sm bg-surface-container-lowest rounded-xl">
+        ) : filteredTrendingAreas.length === 0 ? (
+          <div className="p-8 text-center text-on-surface-variant font-body-sm bg-surface-container-lowest rounded-xl border border-surface-container">
             {t.noTrending}
           </div>
-        ) : trendingAreas.map((item, index) => {
+        ) : filteredTrendingAreas.map((item, index) => {
           const rank = index + 1;
           const isGold = rank === 1;
           const isSilver = rank === 2;
@@ -212,23 +236,36 @@ export default function TrendingPage({ lang = 'en' }) {
             );
           }
 
+          const isRising = item.reportCount >= 4;
+
           return (
             <div key={`${item.area}-${item.city}`} className={`rounded-xl p-4 flex items-center gap-4 relative overflow-hidden transition-all ${cardStyle}`}>
               <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${numberBg}`}>
-                <span className="font-headline-sm text-headline-sm">{rank}</span>
+                <span className="font-headline-sm text-headline-sm font-bold">{rank}</span>
               </div>
 
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between gap-2 mb-1 flex-wrap">
                   <div className="flex items-center gap-2">
-                    <h3 className="font-body-lg text-body-lg text-on-surface font-semibold truncate">{item.area}</h3>
+                    <h3 className="font-body-lg text-body-lg text-on-surface font-bold truncate">{item.area}</h3>
                     {rankBadge}
                   </div>
-                  <span className="font-label-md text-label-md px-2.5 py-1 rounded-full whitespace-nowrap bg-tertiary/10 text-tertiary font-semibold">
-                    {pluralizeReport(item.reportCount)}
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    {isRising ? (
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-800 flex items-center gap-0.5">
+                        📈 Outages Rising
+                      </span>
+                    ) : (
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 flex items-center gap-0.5">
+                        📉 Stable Trend
+                      </span>
+                    )}
+                    <span className="font-label-md text-label-md px-2.5 py-1 rounded-full whitespace-nowrap bg-tertiary/10 text-tertiary font-bold">
+                      {pluralizeReport(item.reportCount)}
+                    </span>
+                  </div>
                 </div>
-                <p className="font-body-sm text-body-sm text-on-surface-variant flex items-center gap-1">
+                <p className="font-body-sm text-body-sm text-on-surface-variant flex items-center gap-1 font-medium">
                   <span className="material-symbols-outlined text-[14px]">location_on</span>
                   {item.city}, Pakistan
                 </p>
@@ -238,109 +275,40 @@ export default function TrendingPage({ lang = 'en' }) {
         })}
       </div>
 
-      {/* Interactive Leaflet Map Visualizer Card */}
+      {/* Map Email Subscription */}
       <div className="px-container-padding mb-stack-lg">
-        <div className="bg-surface-container-lowest rounded-xl shadow-sm overflow-hidden flex flex-col relative border border-surface-container">
-          <div className="p-4 bg-surface-container-low border-b border-surface-container flex items-center justify-between">
-            <div>
-              <h3 className="font-headline-sm text-headline-sm text-on-surface font-bold flex items-center gap-2">
-                <span className="material-symbols-outlined text-primary">map</span>
-                {t.liveMapView}
-              </h3>
-              <p className="font-body-sm text-xs text-on-surface-variant">
-                {t.liveMapSub}
-              </p>
+        <div className="bg-surface-container-lowest rounded-xl p-4 border border-surface-container shadow-xs text-center">
+          <p className="text-xs font-semibold text-on-surface-variant mb-2">
+            Get instant mobile push notifications when outages hit your area
+          </p>
+          {mapSuccessMsg ? (
+            <div className="p-3 bg-emerald-100 border border-emerald-300 text-emerald-800 rounded-xl font-body-sm font-semibold flex items-center justify-center gap-2">
+              <span className="material-symbols-outlined text-[20px]">check_circle</span>
+              {mapSuccessMsg}
             </div>
-            <span className="px-2.5 py-1 bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-full text-[11px] font-bold">
-              Live Map
-            </span>
-          </div>
-
-          {/* Leaflet Map */}
-          <div className="h-64 w-full relative z-0">
-            <MapContainer
-              center={[30.3753, 69.3451]}
-              zoom={5}
-              scrollWheelZoom={false}
-              className="h-full w-full"
-            >
-              <TileLayer
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          ) : (
+            <form onSubmit={handleMapSubscribe} className="flex gap-2 max-w-sm mx-auto">
+              <input
+                type="email"
+                value={emailInput}
+                onChange={(e) => setEmailInput(e.target.value)}
+                placeholder="Enter email for area alerts"
+                className="flex-1 px-3 py-2 text-body-sm bg-surface-container-low text-on-surface border border-surface-container-high rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                required
               />
-
-              {Object.entries(CITY_COORDINATES).map(([cityName, coords]) => {
-                const count = cityReportCounts[cityName] || Math.floor(Math.random() * 3) + 1;
-                const radius = Math.min(25, 10 + count * 3);
-
-                return (
-                  <CircleMarker
-                    key={cityName}
-                    center={coords}
-                    radius={radius}
-                    pathOptions={{
-                      color: count > 3 ? '#ba1a1a' : '#006600',
-                      fillColor: count > 3 ? '#ffdad6' : '#9cf987',
-                      fillOpacity: 0.7,
-                      weight: 2
-                    }}
-                  >
-                    <Popup>
-                      <div className="p-1 text-center font-inter">
-                        <strong className="text-sm block">{cityName}</strong>
-                        <span className="text-xs text-slate-600 block mt-1">
-                          {count} {count === 1 ? 'active report' : 'active reports'}
-                        </span>
-                      </div>
-                    </Popup>
-                    <Tooltip permanent direction="top" offset={[0, -10]} className="bg-white/90 text-[10px] font-bold px-1 rounded shadow-xs">
-                      {cityName} ({count})
-                    </Tooltip>
-                  </CircleMarker>
-                );
-              })}
-            </MapContainer>
-          </div>
-
-          {/* Email notify form */}
-          <div className="p-4 bg-surface-container-lowest border-t border-surface-container">
-            {mapSuccessMsg ? (
-              <div className="p-3 bg-emerald-100 border border-emerald-300 text-emerald-800 rounded-xl font-body-sm font-semibold flex items-center justify-center gap-2 animate-fade-in">
-                <span className="material-symbols-outlined text-[20px]">check_circle</span>
-                {mapSuccessMsg}
-              </div>
-            ) : (
-              <form onSubmit={handleMapSubscribe} className="flex flex-col gap-2 max-w-sm mx-auto text-center">
-                {mapErrorMsg && (
-                  <p className="text-xs text-error font-semibold">{mapErrorMsg}</p>
+              <button
+                type="submit"
+                disabled={mapSubmitting}
+                className="px-4 py-2 bg-primary text-on-primary font-label-md font-semibold rounded-lg hover:bg-primary-container transition-colors disabled:opacity-80 flex items-center gap-1 shrink-0 cursor-pointer"
+              >
+                {mapSubmitting ? (
+                  <span className="material-symbols-outlined text-[16px] animate-spin">refresh</span>
+                ) : (
+                  <span>Subscribe</span>
                 )}
-                <div className="flex gap-2">
-                  <input
-                    type="email"
-                    value={emailInput}
-                    onChange={(e) => setEmailInput(e.target.value)}
-                    placeholder="Enter email for map early access"
-                    className="flex-1 px-3 py-2 text-body-sm bg-surface-container-low text-on-surface border border-surface-container-high rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                    required
-                  />
-                  <button
-                    type="submit"
-                    disabled={mapSubmitting}
-                    className="px-4 py-2 bg-primary text-on-primary font-label-md font-semibold rounded-lg hover:bg-primary-container transition-colors disabled:opacity-80 flex items-center gap-1 shrink-0 cursor-pointer"
-                  >
-                    {mapSubmitting ? (
-                      <span className="material-symbols-outlined text-[16px] animate-spin">refresh</span>
-                    ) : (
-                      <>
-                        <span>Notify Me</span>
-                        <span className="material-symbols-outlined text-[16px]">send</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-              </form>
-            )}
-          </div>
+              </button>
+            </form>
+          )}
         </div>
       </div>
     </div>

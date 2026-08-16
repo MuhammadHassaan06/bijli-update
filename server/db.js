@@ -38,6 +38,7 @@ try {
       city TEXT NOT NULL,
       area TEXT NOT NULL,
       status TEXT NOT NULL,
+      duration TEXT DEFAULT 'Unscheduled',
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       ip_hash TEXT NOT NULL
     );
@@ -48,6 +49,12 @@ try {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
   `);
+
+  try {
+    db.exec(`ALTER TABLE reports ADD COLUMN duration TEXT DEFAULT 'Unscheduled'`);
+  } catch (e) {
+    // Column already exists
+  }
 
   const countStmt = db.prepare('SELECT COUNT(*) as count FROM reports');
   const { count } = countStmt.get();

@@ -18,3 +18,57 @@
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
+
+/* Custom GIS Outage Map Pulsing Markers */
+.pulse-icon-outage {
+  position: relative;
+  width: 24px;
+  height: 24px;
+  background-color: #ba1a1a;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 0 10px rgba(186, 26, 26, 0.8);
+}
+.pulse-icon-outage::after {
+  content: '';
+  position: absolute;
+  top: -8px;
+  left: -8px;
+  right: -8px;
+  bottom: -8px;
+  border: 2px solid #ba1a1a;
+  border-radius: 50%;
+  animation: pulse-ring 1.8s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+}
+
+.pulse-icon-stable {
+  position: relative;
+  width: 20px;
+  height: 20px;
+  background-color: #106e09;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 0 8px rgba(16, 110, 9, 0.6);
+}
+.pulse-icon-stable::after {
+  content: '';
+  position: absolute;
+  top: -6px;
+  left: -6px;
+  right: -6px;
+  bottom: -6px;
+  border: 2px solid #106e09;
+  border-radius: 50%;
+  animation: pulse-ring 2.2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(1.8);
+    opacity: 0;
+  }
+}

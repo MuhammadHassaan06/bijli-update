@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { translations } from '../utils/translations';
+import { playOutageAlertSound, playRestoredSound, playClickSound } from '../utils/audio';
 
 const API_BASE = import.meta.env.VITE_API_BASE || '/api';
 
@@ -27,8 +28,12 @@ export default function HomePage({ lang = 'en', selectedCity = 'Karachi', setSel
     'Karachi', 'Lahore', 'Islamabad', 'Rawalpindi', 'Faisalabad',
     'Multan', 'Peshawar', 'Quetta', 'Hyderabad', 'Gujranwala'
   ]);
-  const [areaInput, setAreaInput] = useState('');
+  const [areaInput, setAreaInput] = useState(() => localStorage.getItem('bijli_area') || '');
   const [popularAreas, setPopularAreas] = useState([]);
+
+  // Selected duration for outage reporting
+  const [selectedDuration, setSelectedDuration] = useState('1 Hour');
+  const [showAutocomplete, setShowAutocomplete] = useState(false);
 
   const [reports, setReports] = useState([]);
   const [aggregate, setAggregate] = useState({
@@ -45,6 +50,25 @@ export default function HomePage({ lang = 'en', selectedCity = 'Karachi', setSel
   const [submittingType, setSubmittingType] = useState(null);
   const [successType, setSuccessType] = useState(null);
   const [toastMessage, setToastMessage] = useState(null);
+
+  // Restore saved city on load
+  useEffect(() => {
+    const savedCity = localStorage.getItem('bijli_city');
+    if (savedCity && setSelectedCity) {
+      setSelectedCity(savedCity);
+    }
+  }, []);
+
+  // Save selected city & area to localStorage
+  useEffect(() => {
+    if (selectedCity) {
+      localStorage.setItem('bijli_city', selectedCity);
+    }
+  }, [selectedCity]);
+
+  useEffect(() => {
+    localStorage.setItem('bijli_area', areaInput);
+  }, [areaInput]);
 
   // Fetch Cities
   useEffect(() => {
@@ -110,13 +134,20 @@ export default function HomePage({ lang = 'en', selectedCity = 'Karachi', setSel
     setSubmittingType(type);
     setToastMessage(null);
 
+    if (type === 'outage') {
+      playOutageAlertSound();
+    } else {
+      playRestoredSound();
+    }
+
     fetch(`${API_BASE}/report`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         city: selectedCity,
         area: areaToReport,
-        status: status
+        status: status,
+        duration: type === 'outage' ? selectedDuration : 'Resolved'
       })
     })
       .then(async (res) => {
@@ -146,13 +177,19 @@ export default function HomePage({ lang = 'en', selectedCity = 'Karachi', setSel
   const displayLocation = areaInput.trim() ? `${areaInput.trim()} (${selectedCity})` : selectedCity;
 
   const handleShareWhatsApp = () => {
+    playClickSound();
     const statusText = isHighAlert
-      ? `🔴 Bijli Outage Alert in ${displayLocation}! Reports in the last hour indicate active power load shedding.`
-      : `🟢 Bijli Status Update: Grid in ${displayLocation} is currently reported stable.`;
+      ? `🔴 Bijli Outage Alert in ${displayLocation}! Active load shedding reported.`
+      : `🟢 Bijli Status Update: Grid in ${displayLocation} is reported stable.`;
 
     const shareUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(`${statusText}\n\nTrack live updates & report power status on Bijli Update:\n${window.location.origin}`)}`;
     window.open(shareUrl, '_blank');
   };
+
+  // Filter autocomplete options based on user input
+  const filteredAutocomplete = popularAreas.filter(a =>
+    a.toLowerCase().includes(areaInput.toLowerCase().trim())
+  );
 
   return (
     <div className="flex flex-col w-full pb-8">
@@ -173,7 +210,7 @@ export default function HomePage({ lang = 'en', selectedCity = 'Karachi', setSel
         {/* Header Section */}
         <div className="flex items-center justify-between gap-4">
           <div className="flex flex-col gap-1">
-            <h1 className="font-display-lg-mobile text-display-lg-mobile text-on-surface">
+            <h1 className="font-display-lg-mobile text-display-lg-mobile text-on-surface font-bold">
               {t.stayUpdated.replace('{city}', selectedCity)}
             </h1>
             <p className="font-body-md text-body-md text-on-surface-variant">
@@ -183,7 +220,10 @@ export default function HomePage({ lang = 'en', selectedCity = 'Karachi', setSel
 
           {/* Quick Helpline trigger button */}
           <button
-            onClick={onOpenHelpline}
+            onClick={() => {
+              playClickSound();
+              if (onOpenHelpline) onOpenHelpline();
+            }}
             className="shrink-0 p-2.5 bg-amber-100 text-amber-900 border border-amber-300 rounded-xl flex flex-col items-center justify-center hover:bg-amber-200 transition-colors shadow-xs cursor-pointer"
             title={t.discoHelpline}
           >
@@ -193,14 +233,15 @@ export default function HomePage({ lang = 'en', selectedCity = 'Karachi', setSel
         </div>
 
         {/* Selection Area */}
-        <div className="flex flex-col gap-stack-md bg-surface-container-lowest p-gutter rounded-xl shadow-sm">
+        <div className="flex flex-col gap-stack-md bg-surface-container-lowest p-gutter rounded-xl shadow-sm border border-surface-container relative">
           <div className="flex flex-col gap-stack-sm">
-            <label className="font-label-md text-label-md text-on-surface" htmlFor="city-select">{t.cityLabel}</label>
+            <label className="font-label-md text-label-md text-on-surface font-bold" htmlFor="city-select">{t.cityLabel}</label>
             <div className="relative">
               <select
                 id="city-select"
                 value={selectedCity}
                 onChange={(e) => {
+                  playClickSound();
                   setSelectedCity(e.target.value);
                   setAreaInput('');
                 }}
@@ -216,8 +257,8 @@ export default function HomePage({ lang = 'en', selectedCity = 'Karachi', setSel
             </div>
           </div>
 
-          <div className="flex flex-col gap-stack-sm">
-            <label className="font-label-md text-label-md text-on-surface" htmlFor="area-input">{t.areaLabel}</label>
+          <div className="flex flex-col gap-stack-sm relative">
+            <label className="font-label-md text-label-md text-on-surface font-bold" htmlFor="area-input">{t.areaLabel}</label>
             <div className="relative">
               <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant">
                 search
@@ -226,11 +267,46 @@ export default function HomePage({ lang = 'en', selectedCity = 'Karachi', setSel
                 id="area-input"
                 type="text"
                 value={areaInput}
-                onChange={(e) => setAreaInput(e.target.value)}
+                onFocus={() => setShowAutocomplete(true)}
+                onChange={(e) => {
+                  setAreaInput(e.target.value);
+                  setShowAutocomplete(true);
+                }}
                 placeholder={t.areaPlaceholder}
-                className="w-full bg-surface-container-low text-on-surface font-body-md text-body-md p-stack-md pl-12 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:bg-surface-container-lowest transition-colors"
+                className="w-full bg-surface-container-low text-on-surface font-body-md text-body-md p-stack-md pl-12 pr-10 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:bg-surface-container-lowest transition-colors"
               />
+              {areaInput && (
+                <button
+                  onClick={() => {
+                    playClickSound();
+                    setAreaInput('');
+                  }}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface"
+                >
+                  <span className="material-symbols-outlined text-[18px]">cancel</span>
+                </button>
+              )}
             </div>
+
+            {/* Search Autocomplete Dropdown */}
+            {showAutocomplete && areaInput.trim() && filteredAutocomplete.length > 0 && (
+              <div className="absolute top-full left-0 right-0 z-30 mt-1 bg-surface-container-lowest rounded-xl border border-surface-container-high shadow-xl overflow-hidden divide-y divide-surface-container">
+                {filteredAutocomplete.map((areaName) => (
+                  <button
+                    key={areaName}
+                    onClick={() => {
+                      playClickSound();
+                      setAreaInput(areaName);
+                      setShowAutocomplete(false);
+                    }}
+                    className="w-full px-4 py-2.5 text-left text-body-sm font-semibold text-on-surface hover:bg-surface-container-low flex items-center justify-between transition-colors"
+                  >
+                    <span>{areaName}</span>
+                    <span className="text-[10px] text-primary font-bold px-2 py-0.5 rounded bg-primary/10">Select</span>
+                  </button>
+                ))}
+              </div>
+            )}
 
             {/* Popular Area Quick Filter Chips */}
             {popularAreas.length > 0 && (
@@ -241,7 +317,11 @@ export default function HomePage({ lang = 'en', selectedCity = 'Karachi', setSel
                 {popularAreas.map((areaName) => (
                   <button
                     key={areaName}
-                    onClick={() => setAreaInput(areaName === areaInput ? '' : areaName)}
+                    onClick={() => {
+                      playClickSound();
+                      setAreaInput(areaName === areaInput ? '' : areaName);
+                      setShowAutocomplete(false);
+                    }}
                     className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition-all border cursor-pointer ${
                       areaInput.toLowerCase() === areaName.toLowerCase()
                         ? 'bg-primary text-on-primary border-primary shadow-xs font-semibold'
@@ -253,6 +333,31 @@ export default function HomePage({ lang = 'en', selectedCity = 'Karachi', setSel
                 ))}
               </div>
             )}
+          </div>
+
+          {/* Outage Duration Selector Chips */}
+          <div className="flex flex-col gap-1.5 pt-2 border-t border-surface-container">
+            <span className="text-[11px] font-bold text-on-surface-variant">
+              Expected Outage Duration Tag:
+            </span>
+            <div className="flex gap-2">
+              {['1 Hour', '2 Hours', '3+ Hours', 'Unscheduled'].map((dur) => (
+                <button
+                  key={dur}
+                  onClick={() => {
+                    playClickSound();
+                    setSelectedDuration(dur);
+                  }}
+                  className={`flex-1 py-1 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
+                    selectedDuration === dur
+                      ? 'bg-tertiary text-on-tertiary border-tertiary shadow-xs'
+                      : 'bg-surface-container-low text-on-surface-variant border-surface-container-high hover:bg-surface-container'
+                  }`}
+                >
+                  {dur}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -278,7 +383,7 @@ export default function HomePage({ lang = 'en', selectedCity = 'Karachi', setSel
               <>
                 <span className="material-symbols-outlined text-[32px]" style={{ fontVariationSettings: "'FILL' 1" }}>bolt</span>
                 <span className="font-headline-sm text-headline-sm">{t.reportOutage}</span>
-                <span className="font-label-md text-label-md opacity-80">{t.reportOutageSub}</span>
+                <span className="font-label-md text-label-md opacity-80">{t.reportOutageSub} ({selectedDuration})</span>
               </>
             )}
           </button>
@@ -310,7 +415,7 @@ export default function HomePage({ lang = 'en', selectedCity = 'Karachi', setSel
         </div>
 
         {/* Live Status Banner */}
-        <div className="bg-surface-container-lowest rounded-xl p-gutter shadow-sm flex flex-col gap-3 relative overflow-hidden">
+        <div className="bg-surface-container-lowest rounded-xl p-gutter shadow-sm flex flex-col gap-3 relative overflow-hidden border border-surface-container">
           <div className={`absolute left-0 top-0 bottom-0 w-1 ${isHighAlert ? 'bg-error' : 'bg-primary'}`}></div>
 
           <div className="flex items-start gap-stack-md">
@@ -379,14 +484,14 @@ export default function HomePage({ lang = 'en', selectedCity = 'Karachi', setSel
         {/* Recent Activity Feed */}
         <div className="flex flex-col gap-stack-md mt-4">
           <div className="flex items-center justify-between">
-            <h2 className="font-headline-md text-headline-md text-on-surface">{t.liveFeed}</h2>
+            <h2 className="font-headline-md text-headline-md text-on-surface font-bold">{t.liveFeed}</h2>
             <span className="flex items-center gap-1 font-label-md text-label-md text-primary bg-primary-container/10 px-2.5 py-1 rounded-full">
               <span className="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
               {t.liveTag}
             </span>
           </div>
 
-          <div className="bg-surface-container-lowest rounded-xl shadow-sm flex flex-col divide-y divide-surface-container-highest overflow-hidden">
+          <div className="bg-surface-container-lowest rounded-xl shadow-sm flex flex-col divide-y divide-surface-container-highest overflow-hidden border border-surface-container">
             {loadingFeed ? (
               <div className="p-gutter flex flex-col gap-4 animate-pulse">
                 {[1, 2, 3].map((i) => (
@@ -438,6 +543,11 @@ export default function HomePage({ lang = 'en', selectedCity = 'Karachi', setSel
                           }`}>
                             {isConfirmed ? t.confirmed : t.unverified}
                           </span>
+                          {item.duration && isOutage && (
+                            <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                              ⏱️ {item.duration}
+                            </span>
+                          )}
                         </div>
                         <span className={`font-label-md text-label-md ${isOutage ? 'text-error' : 'text-primary'}`}>
                           {isOutage ? t.outageReported : t.powerRestored}
